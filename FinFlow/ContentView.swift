@@ -1,24 +1,23 @@
-//
-//  ContentView.swift
-//  FinFlow
-//
-//  Created by Filipe Fernandes on 16/08/26.
-//
-
 import SwiftUI
 
 struct ContentView: View {
+    @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding: Bool = false
+    
     var body: some View {
-        VStack {
-            Image(systemName: "globe")
-                .imageScale(.large)
-                .foregroundStyle(.tint)
-            Text("Hello, world!")
+        if hasCompletedOnboarding {
+            // Root Navigation Structure
+            MainTabView()
+        } else {
+            OnboardingView(onFinish: {
+                hasCompletedOnboarding = true
+            })
+            .transition(.opacity)
         }
-        .padding()
     }
 }
 
 #Preview {
-    ContentView()
+    Group {
+        ContentView()
+    }
 }

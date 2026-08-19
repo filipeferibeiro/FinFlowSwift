@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import SwiftData
 
 @main
 struct FinFlowApp: App {
@@ -13,5 +14,6 @@ struct FinFlowApp: App {
         WindowGroup {
             ContentView()
         }
+        .modelContainer(for: [Account.self, Transaction.self])
     }
 }
