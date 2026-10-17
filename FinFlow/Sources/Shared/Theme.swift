@@ -2,37 +2,60 @@ import SwiftUI
 
 public enum Theme {
     public enum Colors {
-        // Brand Colors - Adaptive for high contrast in Light Mode and soft pastel glow in Dark Mode
+        // Executive Royal Blue Brand Palette (Zero Pastels)
         public static let primary = Color(UIColor { trait in
             trait.userInterfaceStyle == .dark
-                ? UIColor(Color(hex: "#FFB380"))
-                : UIColor(Color(hex: "#F26B1D"))
+                ? UIColor(Color(hex: "#3B7BFF")) // Electric Royal Blue
+                : UIColor(Color(hex: "#1A5CFF")) // Institutional Royal Blue
+        })
+
+        public static let primaryDeep = Color(hex: "#0D2B6B")
+        public static let secondaryAccent = Color(UIColor { trait in
+            trait.userInterfaceStyle == .dark
+                ? UIColor(Color(hex: "#38BDF8")) // Vibrant Sky Cyan
+                : UIColor(Color(hex: "#0096E6")) // Deep Ocean Cyan
         })
 
         public static let primaryGradient = LinearGradient(
-            colors: [Color(hex: "#FF8C42"), Color(hex: "#FFB380")],
+            colors: [Color(hex: "#1A5CFF"), Color(hex: "#0088FF")],
             startPoint: .topLeading,
             endPoint: .bottomTrailing
         )
 
-        public static let secondaryAccent = Color(UIColor { trait in
-            trait.userInterfaceStyle == .dark
-                ? UIColor(Color(hex: "#FFDAC1"))
-                : UIColor(Color(hex: "#FFB380"))
-        })
+        public static let heroGradient = LinearGradient(
+            colors: [
+                Color(hex: "#0B1F52"),
+                Color(hex: "#1545C7"),
+                Color(hex: "#1A6BFF")
+            ],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
 
-        // Backgrounds (Deep and immersive for dark mode, crisp for light mode)
+        // Backgrounds (Deep Midnight Navy for dark mode, Crisp Ice Slate for light mode)
         public static let backgroundBase = Color(UIColor { trait in
             trait.userInterfaceStyle == .dark
-                ? UIColor(Color(hex: "#0A0A0C"))
-                : UIColor(Color(hex: "#F8F9FA"))
+                ? UIColor(Color(hex: "#060A12"))
+                : UIColor(Color(hex: "#F2F5FA"))
         })
 
-        // Surfaces are meant to be materials, but if a solid is needed:
+        // Solid Surfaces
         public static let surfaceSolid = Color(UIColor { trait in
             trait.userInterfaceStyle == .dark
-                ? UIColor(Color(hex: "#1C1C1E"))
+                ? UIColor(Color(hex: "#101726"))
                 : UIColor(Color(hex: "#FFFFFF"))
+        })
+
+        public static let surfaceElevated = Color(UIColor { trait in
+            trait.userInterfaceStyle == .dark
+                ? UIColor(Color(hex: "#182236"))
+                : UIColor(Color(hex: "#E8EEF7"))
+        })
+
+        public static let cardBorder = Color(UIColor { trait in
+            trait.userInterfaceStyle == .dark
+                ? UIColor(Color.white.opacity(0.10))
+                : UIColor(Color(hex: "#1A5CFF").opacity(0.10))
         })
 
         // Typography
@@ -40,38 +63,40 @@ public enum Theme {
         public static let textSecondary = Color.secondary
         public static let textTertiary = Color(UIColor.tertiaryLabel)
 
-        // Semantics - Dynamic colors for better contrast in light/dark modes
+        // Vibrant, High-Contrast Financial Semantics (No Pastels)
         public static let success = Color(UIColor { trait in
             trait.userInterfaceStyle == .dark
-                ? UIColor(Color(hex: "#72E385"))
-                : UIColor(Color(hex: "#2B9348"))
+                ? UIColor(Color(hex: "#10B981")) // Vibrant Emerald
+                : UIColor(Color(hex: "#059669")) // Deep Emerald
         })
+
         public static let error = Color(UIColor { trait in
             trait.userInterfaceStyle == .dark
-                ? UIColor(Color(hex: "#FF8FAB"))
-                : UIColor(Color(hex: "#D90429"))
+                ? UIColor(Color(hex: "#F43F5E")) // Vibrant Crimson Rose
+                : UIColor(Color(hex: "#DC2626")) // Deep Crimson
         })
+
         public static let warning = Color(UIColor { trait in
             trait.userInterfaceStyle == .dark
-                ? UIColor(Color(hex: "#FFD166"))
-                : UIColor(Color(hex: "#D97706"))
+                ? UIColor(Color(hex: "#F59E0B")) // Vibrant Amber
+                : UIColor(Color(hex: "#D97706")) // Rich Amber
         })
     }
 
     public enum Typography {
-        // Dynamic Type-compliant typography
+        // Dynamic Type-compliant executive typography
         public static let hero = Font.system(.largeTitle, design: .rounded).bold()
         public static let largeTitle = Font.system(.largeTitle, design: .rounded).bold()
-        public static let title1 = Font.system(.title, design: .default).bold()
-        public static let title2 = Font.system(.title2, design: .default).weight(.semibold)
-        public static let title3 = Font.system(.title3, design: .default).weight(.medium)
+        public static let title1 = Font.system(.title, design: .rounded).bold()
+        public static let title2 = Font.system(.title2, design: .rounded).weight(.semibold)
+        public static let title3 = Font.system(.title3, design: .rounded).weight(.semibold)
 
         public static let headline = Font.system(.headline, design: .default).weight(.semibold)
         public static let body = Font.system(.body, design: .default)
-        public static let subheadline = Font.system(.subheadline, design: .default)
+        public static let subheadline = Font.system(.subheadline, design: .default).weight(.medium)
 
-        public static let caption1 = Font.system(.caption, design: .default).weight(.medium)
-        public static let caption2 = Font.system(.caption2, design: .default).weight(.medium)
+        public static let caption1 = Font.system(.caption, design: .default).weight(.semibold)
+        public static let caption2 = Font.system(.caption2, design: .default).weight(.semibold)
     }
 
     public enum Layout {

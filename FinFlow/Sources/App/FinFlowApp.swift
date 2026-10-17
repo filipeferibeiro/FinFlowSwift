@@ -1,10 +1,3 @@
-//
-//  FinFlowApp.swift
-//  FinFlow
-//
-//  Created by Filipe Fernandes on 16/08/26.
-//
-
 import SwiftUI
 import SwiftData
 
@@ -14,6 +7,6 @@ struct FinFlowApp: App {
         WindowGroup {
             ContentView()
         }
-        .modelContainer(for: [Account.self, Transaction.self])
+        .modelContainer(for: [Account.self, Transaction.self, CreditCard.self])
     }
 }

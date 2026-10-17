@@ -8,31 +8,21 @@ public extension View {
         interactive: Bool = false
     ) -> some View {
         if #available(iOS 26, *) {
-            self.glassEffect(interactive ? .regular.interactive() : .regular, in: shape)
+            self.glassEffect(.regular, in: shape)
                 .overlay {
-                    shape.stroke(
-                        LinearGradient(
-                            colors: [.white.opacity(0.4), .clear, .white.opacity(0.1)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        ),
-                        lineWidth: 1
-                    )
+                    shape.stroke(Theme.Colors.cardBorder, lineWidth: 1)
+                        .allowsHitTesting(false)
                 }
-                .shadow(color: .black.opacity(0.12), radius: 12, x: 0, y: 6)
+                .contentShape(shape)
+                .shadow(color: .black.opacity(0.08), radius: 14, x: 0, y: 6)
         } else {
             self.background(fallbackMaterial, in: shape)
                 .overlay {
-                    shape.stroke(
-                        LinearGradient(
-                            colors: [.white.opacity(0.4), .clear, .white.opacity(0.1)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        ),
-                        lineWidth: 1
-                    )
+                    shape.stroke(Theme.Colors.cardBorder, lineWidth: 1)
+                        .allowsHitTesting(false)
                 }
-                .shadow(color: .black.opacity(0.12), radius: 12, x: 0, y: 6)
+                .contentShape(shape)
+                .shadow(color: .black.opacity(0.08), radius: 14, x: 0, y: 6)
         }
     }
 
@@ -56,23 +46,26 @@ public extension View {
     ) -> some View {
         if #available(iOS 26, *) {
             self.glassEffect(
-                interactive ? .regular.tint(tint).interactive() : .regular.tint(tint),
+                .regular.tint(tint),
                 in: shape
             )
-            .shadow(color: tint.opacity(0.3), radius: 12, x: 0, y: 6)
+            .contentShape(shape)
+            .shadow(color: tint.opacity(0.32), radius: 14, x: 0, y: 6)
         } else {
             self.background(tint.gradient, in: shape)
                 .overlay {
                     shape.stroke(
                         LinearGradient(
-                            colors: [.white.opacity(0.4), .clear, .white.opacity(0.1)],
+                            colors: [.white.opacity(0.35), .clear, .white.opacity(0.1)],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
                         ),
                         lineWidth: 1
                     )
+                    .allowsHitTesting(false)
                 }
-                .shadow(color: tint.opacity(0.3), radius: 12, x: 0, y: 6)
+                .contentShape(shape)
+                .shadow(color: tint.opacity(0.32), radius: 14, x: 0, y: 6)
         }
     }
 

@@ -1,72 +1,79 @@
 import SwiftUI
 
 struct BalanceStepView: View {
-    @ScaledMetric(relativeTo: .largeTitle) private var iconSize: Double = 72
+    @ScaledMetric(relativeTo: .largeTitle) private var iconSize: Double = 52
     @Bindable var viewModel: OnboardingViewModel
     var onFinish: () -> Void
 
     var body: some View {
-        VStack(spacing: Theme.Layout.standardPadding * 2) {
+        VStack(spacing: 24) {
             Spacer()
 
-            Image(systemName: "building.columns.fill")
-                .font(.system(size: iconSize))
-                .foregroundStyle(Theme.Colors.primary)
-                .padding(24)
-                .glassEffectWithFallback(in: .circle)
-                .accessibilityHidden(true)
+            ZStack {
+                Circle()
+                    .fill(Theme.Colors.primary.opacity(0.14))
+                    .frame(width: 128, height: 128)
 
-            VStack(spacing: 24) {
-                VStack(spacing: 8) {
-                    Text("Crie sua primeira conta")
-                        .font(Theme.Typography.title1)
-                        .primaryTextColor()
-                        .multilineTextAlignment(.center)
+                Circle()
+                    .fill(Theme.Colors.heroGradient)
+                    .frame(width: 96, height: 96)
+                    .shadow(color: Theme.Colors.primary.opacity(0.35), radius: 18, x: 0, y: 8)
 
-                    Text("Dê um nome para a sua conta principal e informe o saldo atual dela.")
-                        .font(Theme.Typography.subheadline)
-                        .secondaryTextColor()
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal)
-                }
+                Image(systemName: "building.columns.fill")
+                    .font(.system(size: iconSize, weight: .semibold))
+                    .foregroundStyle(.white)
+            }
+            .accessibilityHidden(true)
+
+            VStack(spacing: 8) {
+                Text("Configure sua Conta Principal")
+                    .font(Theme.Typography.title1)
+                    .primaryTextColor()
+                    .multilineTextAlignment(.center)
+
+                Text("Defina o nome e o saldo inicial da sua conta bancária ou carteira principal.")
+                    .font(Theme.Typography.subheadline)
+                    .secondaryTextColor()
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal)
+            }
+
+            VStack(spacing: 16) {
+                GlassTextField(
+                    title: "Nome da Conta",
+                    placeholder: "Ex: Itaú, Nubank, Carteira...",
+                    text: $viewModel.accountName
+                )
 
                 VStack(alignment: .leading, spacing: 8) {
-                    GlassTextField(
-                        title: "NOME DA CONTA",
-                        placeholder: "Ex: Carteira, Itaú, Nubank...",
-                        text: $viewModel.accountName
-                    )
-                }
-                .padding(.horizontal)
-
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("SALDO INICIAL")
+                    Text("SALDO ATUAL")
                         .font(Theme.Typography.caption1)
                         .secondaryTextColor()
                         .padding(.leading, 4)
 
-                    HStack {
+                    HStack(alignment: .firstTextBaseline, spacing: 8) {
                         Text("R$")
                             .font(Theme.Typography.title2)
-                            .secondaryTextColor()
+                            .foregroundStyle(Theme.Colors.primary)
 
                         CurrencyTextField(valueInCents: $viewModel.initialBalanceCents)
-                            .font(Theme.Typography.title2)
+                            .font(.system(.title2, design: .rounded).bold())
+                            .primaryTextColor()
                     }
                     .padding()
                     .glassEffectWithFallback(interactive: true)
                 }
-                .padding(.horizontal)
             }
+            .padding(.horizontal, 4)
 
             Spacer()
 
             Button(action: onFinish) {
-                Text("Concluir e Acessar")
+                Text("Concluir e Acessar Painel")
             }
             .buttonStyle(.customProminentGlass)
             .disabled(!viewModel.isAccountValid)
-            .opacity(viewModel.isAccountValid ? 1.0 : 0.5)
+            .opacity(viewModel.isAccountValid ? 1.0 : 0.45)
         }
         .padding(Theme.Layout.standardPadding)
     }

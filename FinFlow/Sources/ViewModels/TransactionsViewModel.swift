@@ -4,6 +4,7 @@ import SwiftData
 @Observable
 public final class TransactionsViewModel {
     public var selectedDate: Date = .now
+    public var selectedFilter: TransactionFilter = .all
     public var transactionToDelete: Transaction?
     public var showingDeleteAlert: Bool = false
     public var transactionToEdit: Transaction?

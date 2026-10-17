@@ -5,15 +5,15 @@ public struct MainTabView: View {
 
     public var body: some View {
         TabView {
-            Tab("Início", systemImage: "house.fill") {
+            Tab("Visão Geral", systemImage: "chart.pie.fill") {
                 HomeView()
             }
 
-            Tab("Transações", systemImage: "arrow.up.arrow.down") {
+            Tab("Extrato", systemImage: "list.bullet.rectangle.portrait.fill") {
                 TransactionsView()
             }
 
-            Tab("Ajustes", systemImage: "gear") {
+            Tab("Ajustes", systemImage: "gearshape.fill") {
                 SettingsView()
             }
         }

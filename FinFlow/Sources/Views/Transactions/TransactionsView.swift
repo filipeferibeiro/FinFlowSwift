@@ -4,20 +4,27 @@ import SwiftData
 public struct TransactionsView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @AppStorage("isBalanceVisible") private var isBalanceVisible: Bool = true
 
     @Query(sort: \Transaction.date, order: .reverse) private var allTransactions: [Transaction]
     @Query private var accounts: [Account]
+    @Query private var creditCards: [CreditCard]
 
     @State private var viewModel = TransactionsViewModel()
+    @State private var invoiceCardToPay: CreditCard?
+    @State private var invoiceCardToInspect: CreditCard?
 
     public init() {}
 
     public var body: some View {
         let monthTransactions = TransactionService.transactions(
             for: viewModel.selectedDate,
-            from: allTransactions
+            from: allTransactions,
+            creditCards: creditCards,
+            accounts: accounts
         )
-        let groupedTransactions = TransactionService.groupedByDay(monthTransactions)
+        let visibleTransactions = monthTransactions.filter { viewModel.selectedFilter.matches($0) }
+        let groupedTransactions = TransactionService.groupedByDay(visibleTransactions)
         let summary = TransactionService.summary(
             for: monthTransactions,
             accounts: accounts
@@ -28,24 +35,30 @@ public struct TransactionsView: View {
                 ZStack(alignment: .top) {
                     List {
                         Spacer()
-                            .frame(height: 90)
+                            .frame(height: 128)
                             .listRowInsets(EdgeInsets())
                             .listRowBackground(Color.clear)
                             .listRowSeparator(.hidden)
 
-                        MonthOverviewView(summary: summary)
+                        MonthOverviewView(summary: summary, isBalanceVisible: isBalanceVisible)
                             .padding(.bottom, 8)
                             .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
                             .listRowBackground(Color.clear)
                             .listRowSeparator(.hidden)
 
-                        if monthTransactions.isEmpty {
+                        if visibleTransactions.isEmpty {
                             ContentUnavailableView(
-                                "Sem transações no mês",
-                                systemImage: "tray.fill",
-                                description: Text("Você ainda não registrou nada neste mês.")
+                                viewModel.selectedFilter == .all
+                                    ? "Sem lançamentos no mês"
+                                    : "Nenhum lançamento encontrado",
+                                systemImage: "doc.text.magnifyingglass",
+                                description: Text(
+                                    viewModel.selectedFilter == .all
+                                        ? "Você ainda não registrou movimentações ou faturas neste mês."
+                                        : "Não há transações para o filtro '\(viewModel.selectedFilter.title)' neste mês."
+                                )
                             )
-                            .frame(maxWidth: .infinity, minHeight: 320)
+                            .frame(maxWidth: .infinity, minHeight: 280)
                             .listRowInsets(EdgeInsets())
                             .listRowBackground(Color.clear)
                             .listRowSeparator(.hidden)
@@ -54,11 +67,12 @@ public struct TransactionsView: View {
                                 Section {
                                     ForEach(dayGroup.transactions) { tx in
                                         Button {
-                                            viewModel.transactionToEdit = tx
+                                            handleRowTap(tx)
                                         } label: {
                                             TransactionRowView(
                                                 transaction: tx,
-                                                isDisintegrating: viewModel.disintegratingTxIDs.contains(tx.id)
+                                                isDisintegrating: viewModel.disintegratingTxIDs.contains(tx.id),
+                                                isAmountVisible: isBalanceVisible
                                             )
                                         }
                                         .buttonStyle(.plain)
@@ -67,37 +81,78 @@ public struct TransactionsView: View {
                                         .listRowSeparator(.hidden)
                                         .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
                                         .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                                            Button {
-                                                viewModel.requestDelete(tx)
-                                            } label: {
-                                                Label("Excluir", systemImage: "trash")
+                                            if let cardId = tx.invoiceCreditCardId,
+                                               let card = creditCards.first(where: { $0.id == cardId }) {
+                                                Button {
+                                                    invoiceCardToInspect = card
+                                                } label: {
+                                                    Label("Ver Fatura", systemImage: "creditcard.fill")
+                                                }
+                                                .tint(Theme.Colors.primary)
+                                            } else {
+                                                Button {
+                                                    viewModel.requestDelete(tx)
+                                                } label: {
+                                                    Label("Excluir", systemImage: "trash")
+                                                }
+                                                .tint(Theme.Colors.error)
                                             }
-                                            .tint(Theme.Colors.error)
                                         }
                                         .swipeActions(edge: .leading, allowsFullSwipe: true) {
-                                            Button {
-                                                withAnimation {
-                                                    viewModel.togglePaid(tx, in: modelContext)
+                                            if let cardId = tx.invoiceCreditCardId,
+                                               let card = creditCards.first(where: { $0.id == cardId }) {
+                                                Button {
+                                                    if tx.isPaid {
+                                                        withAnimation {
+                                                            TransactionService.reopenCreditCardInvoice(
+                                                                for: card,
+                                                                in: viewModel.selectedDate,
+                                                                from: allTransactions,
+                                                                in: modelContext
+                                                            )
+                                                        }
+                                                    } else {
+                                                        invoiceCardToPay = card
+                                                    }
+                                                } label: {
+                                                    Label(
+                                                        tx.isPaid ? "Reabrir Fatura" : "Pagar Fatura",
+                                                        systemImage: tx.isPaid ? "arrow.uturn.backward.circle.fill" : "checkmark.seal.fill"
+                                                    )
                                                 }
-                                            } label: {
-                                                Label(
-                                                    tx.isPaid ? "Marcar Pendente" : "Marcar Pago",
-                                                    systemImage: tx.isPaid ? "xmark.circle" : "checkmark.circle"
-                                                )
+                                                .tint(tx.isPaid ? Theme.Colors.warning : Theme.Colors.success)
+                                            } else {
+                                                Button {
+                                                    withAnimation {
+                                                        viewModel.togglePaid(tx, in: modelContext)
+                                                    }
+                                                } label: {
+                                                    Label(
+                                                        tx.isPaid ? "Marcar Pendente" : "Marcar Efetivado",
+                                                        systemImage: tx.isPaid ? "clock.badge.exclamationmark" : "checkmark.circle.fill"
+                                                    )
+                                                }
+                                                .tint(tx.isPaid ? Theme.Colors.warning : Theme.Colors.success)
                                             }
-                                            .tint(tx.isPaid ? Theme.Colors.warning : Theme.Colors.success)
                                         }
                                     }
                                 } header: {
-                                    Text(DateUtils.formattedDay(dayGroup.date))
-                                        .font(Theme.Typography.headline)
-                                        .primaryTextColor()
+                                    Text(DateUtils.formattedDay(dayGroup.date).uppercased())
+                                        .font(Theme.Typography.caption1)
+                                        .secondaryTextColor()
                                         .textCase(nil)
-                                        .padding(.vertical, 8)
+                                        .padding(.top, 12)
+                                        .padding(.bottom, 4)
                                         .padding(.horizontal, 16)
                                 }
                                 .listRowInsets(EdgeInsets())
                             }
+
+                            Spacer()
+                                .frame(height: 80)
+                                .listRowInsets(EdgeInsets())
+                                .listRowBackground(Color.clear)
+                                .listRowSeparator(.hidden)
                         }
                     }
                     .scrollContentBackground(.hidden)
@@ -105,16 +160,19 @@ public struct TransactionsView: View {
                     .scrollIndicators(.hidden)
                     .animation(
                         .spring(response: 0.35, dampingFraction: 0.8, blendDuration: 0.1),
-                        value: monthTransactions.map(\.id)
+                        value: visibleTransactions.map(\.id)
                     )
 
-                    MonthSelectorView(selectedDate: viewModel.selectedDate) { delta in
+                    MonthSelectorView(
+                        selectedDate: viewModel.selectedDate,
+                        selectedFilter: $viewModel.selectedFilter
+                    ) { delta in
                         withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
                             viewModel.changeMonth(by: delta)
                         }
                     }
                     .padding(.horizontal, 16)
-                    .padding(.top, 16)
+                    .padding(.top, 8)
                 }
                 .overlay(alignment: .bottomTrailing) {
                     FloatingActionButton {
@@ -125,17 +183,20 @@ public struct TransactionsView: View {
             .navigationTitle("Extrato")
             .navigationBarTitleDisplayMode(.inline)
             .scrollEdgeEffectStyle(.soft, for: .top)
+            .navigationDestination(item: $invoiceCardToInspect) { card in
+                CreditCardDetailView(card: card, initialDate: viewModel.selectedDate)
+            }
             .confirmationDialog(
                 "Excluir Transação",
                 isPresented: $viewModel.showingDeleteAlert,
                 titleVisibility: .visible,
                 presenting: viewModel.transactionToDelete
             ) { tx in
-                if tx.isFixed {
-                    Button("Excluir apenas esta", role: .destructive) {
+                if tx.isRecurringOrInstallment {
+                    Button(tx.isInstallment ? "Excluir apenas esta parcela" : "Excluir apenas esta", role: .destructive) {
                         viewModel.performDelete(tx, deleteFuture: false, in: modelContext, reduceMotion: reduceMotion)
                     }
-                    Button("Excluir esta e as próximas", role: .destructive) {
+                    Button(tx.isInstallment ? "Excluir esta e as próximas parcelas" : "Excluir esta e as próximas", role: .destructive) {
                         viewModel.performDelete(tx, deleteFuture: true, in: modelContext, reduceMotion: reduceMotion)
                     }
                     Button("Cancelar", role: .cancel) {
@@ -158,6 +219,20 @@ public struct TransactionsView: View {
             .sheet(item: $viewModel.transactionToEdit) { tx in
                 AddTransactionView(transactionToEdit: tx)
             }
+            .sheet(item: $invoiceCardToPay) { card in
+                PayCreditCardInvoiceView(card: card, monthDate: viewModel.selectedDate) {
+                    invoiceCardToInspect = card
+                }
+            }
+        }
+    }
+
+    private func handleRowTap(_ tx: Transaction) {
+        if let cardId = tx.invoiceCreditCardId,
+           let card = creditCards.first(where: { $0.id == cardId }) {
+            invoiceCardToPay = card
+        } else {
+            viewModel.transactionToEdit = tx
         }
     }
 }

@@ -89,6 +89,22 @@ public enum DateUtils {
         return calendar.date(from: targetComponents)
     }
 
+    /// Returns a `Date` in `targetMonthDate` corresponding to `dayOfMonth` (1...31), clamped to the valid days of that month.
+    public static func date(forDay dayOfMonth: Int, inMonthOf targetMonthDate: Date, calendar: Calendar = .current) -> Date? {
+        guard let (startOfMonth, _) = monthBounds(for: targetMonthDate, calendar: calendar),
+              let dayRange = calendar.range(of: .day, in: .month, for: startOfMonth) else {
+            return nil
+        }
+
+        var targetComponents = calendar.dateComponents([.year, .month], from: startOfMonth)
+        targetComponents.day = min(max(dayOfMonth, dayRange.lowerBound), dayRange.upperBound - 1)
+        targetComponents.hour = 12
+        targetComponents.minute = 0
+        targetComponents.second = 0
+
+        return calendar.date(from: targetComponents)
+    }
+
     /// Generates a deterministic UUID from a template UUID and month key (`yyyy-MM`) so virtual transactions keep stable identity.
     public static func deterministicUUID(from baseUUID: UUID, monthKey: String) -> UUID {
         var bytes = withUnsafeBytes(of: baseUUID.uuid) { Array($0) }
