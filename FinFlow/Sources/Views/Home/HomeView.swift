@@ -4,227 +4,200 @@ import SwiftData
 public struct HomeView: View {
     @AppStorage("userName") private var userName: String = "Usuário"
     @Query private var accounts: [Account]
-    
+    @Query(sort: \Transaction.date, order: .reverse) private var allTransactions: [Transaction]
+
+    @ScaledMetric(relativeTo: .largeTitle) private var heroBalanceSize: Double = 48
+
     @State private var isBalanceVisible: Bool = true
     @State private var isAddingTransaction: Bool = false
+    @State private var isAddingAccount: Bool = false
     @State private var accountToEdit: Account?
-    
-    private var totalBalanceCents: Int {
-        accounts.reduce(0) { $0 + $1.currentBalanceCents }
+
+    private var currentMonthSummary: MonthSummary {
+        let monthTransactions = TransactionService.transactions(for: .now, from: allTransactions)
+        return TransactionService.summary(for: monthTransactions, accounts: accounts)
     }
-    
-    private var greeting: String {
-        let hour = Calendar.current.component(.hour, from: Date())
-        switch hour {
-        case 6..<12: return "Bom dia"
-        case 12..<18: return "Boa tarde"
-        case 18..<24, 0..<6: return "Boa noite"
-        default: return "Olá"
-        }
-    }
-    
+
     public init() {}
-    
+
     public var body: some View {
+        let summary = currentMonthSummary
+
         NavigationStack {
             BaseView {
-                ScrollView(.vertical, showsIndicators: false) {
+                ScrollView {
                     VStack(spacing: Theme.Layout.standardPadding) {
-                        
-                        // Header / Total Balance
-                        balanceHeader
-                        
-                        // Accounts Section
+                        balanceHeader(totalBalanceCents: summary.currentBalanceCents)
+
+                        monthQuickSummarySection(summary: summary)
+
                         accountsSection
-                        
-                        // Credit Cards Section
-                        creditCardsSection
-                        
-                        // Spacer for bottom padding to avoid tab bar and FAB collision
-                        Spacer().frame(height: 100)
+
+                        Spacer()
+                            .frame(height: 100)
                     }
                     .padding()
                 }
+                .scrollIndicators(.hidden)
                 .overlay(alignment: .bottomTrailing) {
-                    floatingActionButton
+                    FloatingActionButton {
+                        isAddingTransaction = true
+                    }
                 }
             }
             .navigationTitle("Dashboard")
-            .navigationBarTitleDisplayMode(.inline) // A bit cleaner for minimalist feel
+            .navigationBarTitleDisplayMode(.inline)
             .scrollEdgeEffectStyle(.soft, for: .top)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button(action: {
-                        withAnimation(.easeInOut) {
-                            isBalanceVisible.toggle()
-                        }
-                    }) {
-                        Image(systemName: isBalanceVisible ? "eye.fill" : "eye.slash.fill")
-                            .font(.system(size: 18))
-                            .foregroundStyle(Theme.Colors.primary)
-                            .accessibilityLabel(isBalanceVisible ? "Ocultar Saldo" : "Mostrar Saldo")
-                    }
+                    Button(
+                        isBalanceVisible ? "Ocultar Saldo" : "Mostrar Saldo",
+                        systemImage: isBalanceVisible ? "eye.fill" : "eye.slash.fill",
+                        action: toggleBalanceVisibility
+                    )
+                    .labelStyle(.iconOnly)
+                    .foregroundStyle(Theme.Colors.primary)
                 }
             }
             .sheet(isPresented: $isAddingTransaction) {
                 AddTransactionView()
+            }
+            .sheet(isPresented: $isAddingAccount) {
+                AddAccountView()
             }
             .sheet(item: $accountToEdit) { account in
                 AddAccountView(accountToEdit: account)
             }
         }
     }
-    
-    // MARK: - Components
-    
-    private var balanceHeader: some View {
+
+    // MARK: - Actions
+
+    private func toggleBalanceVisibility() {
+        withAnimation(.easeInOut) {
+            isBalanceVisible.toggle()
+        }
+    }
+
+    // MARK: - Subviews
+
+    private func balanceHeader(totalBalanceCents: Int) -> some View {
         VStack(spacing: 8) {
-            Text("\(greeting), \(userName)")
+            Text("\(DateUtils.greeting()), \(userName)")
                 .font(Theme.Typography.subheadline)
                 .foregroundStyle(Theme.Colors.textSecondary)
-            
+
             HStack(alignment: .firstTextBaseline, spacing: 4) {
                 Text("R$")
-                    .font(.system(size: 28, weight: .medium, design: .rounded))
+                    .font(.system(.title, design: .rounded).weight(.medium))
                     .foregroundStyle(Theme.Colors.textTertiary)
-                
-                Text(isBalanceVisible ? formatAmount(totalBalanceCents) : "•••••")
-                    .font(.system(size: 56, weight: .bold, design: .rounded))
+
+                Text(isBalanceVisible ? CurrencyFormatter.formatDecimal(totalBalanceCents) : "•••••")
+                    .font(.system(size: heroBalanceSize, weight: .bold, design: .rounded))
                     .foregroundStyle(Theme.Colors.textPrimary)
                     .contentTransition(.numericText())
             }
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel("Saldo total: \(isBalanceVisible ? CurrencyFormatter.formatCurrency(totalBalanceCents) : "oculto")")
         }
         .padding(.top, 16)
-        .padding(.bottom, 32)
+        .padding(.bottom, 24)
         .frame(maxWidth: .infinity, alignment: .center)
     }
-    
-    private var floatingActionButton: some View {
-        Button(action: {
-            isAddingTransaction = true
-        }) {
-            Image(systemName: "plus")
-                .font(.system(size: 24, weight: .bold))
-                .foregroundStyle(.white)
-                .padding(16)
-                .background(Theme.Colors.primary.opacity(0.4), in: .circle)
-                .glassEffectWithFallback(in: .circle)
+
+    private func monthQuickSummarySection(summary: MonthSummary) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Resumo de \(DateUtils.monthName(for: .now))")
+                .font(Theme.Typography.headline)
+                .primaryTextColor()
+                .accessibilityAddTraits(.isHeader)
+
+            FallbackGlassContainer(spacing: 16) {
+                HStack(spacing: 16) {
+                    summaryCard(
+                        title: "Entradas",
+                        icon: "arrow.down.left",
+                        amountCents: summary.monthIncomeCents,
+                        color: Theme.Colors.success
+                    )
+
+                    summaryCard(
+                        title: "Saídas",
+                        icon: "arrow.up.right",
+                        amountCents: summary.monthExpenseCents,
+                        color: Theme.Colors.error
+                    )
+                }
+            }
         }
-        .padding(.trailing, 20)
-        .padding(.bottom, 20)
     }
-    
+
+    private func summaryCard(title: String, icon: String, amountCents: Int, color: Color) -> some View {
+        PremiumGlassContainer(cornerRadius: Theme.Layout.cornerRadius, padding: 16) {
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(spacing: 6) {
+                    Image(systemName: icon)
+                        .font(.headline.bold())
+                        .foregroundStyle(color)
+
+                    Text(title)
+                        .font(Theme.Typography.subheadline)
+                        .secondaryTextColor()
+                }
+
+                Text(isBalanceVisible ? CurrencyFormatter.formatCurrency(amountCents) : "R$ •••••")
+                    .font(.system(.headline, design: .rounded).bold())
+                    .primaryTextColor()
+                    .contentTransition(.numericText())
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(title) no mês: \(isBalanceVisible ? CurrencyFormatter.formatCurrency(amountCents) : "oculto")")
+    }
+
     private var accountsSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Minhas Contas")
-                .font(Theme.Typography.headline)
-                .primaryTextColor()
-            
+            HStack {
+                Text("Minhas Contas")
+                    .font(Theme.Typography.headline)
+                    .primaryTextColor()
+                    .accessibilityAddTraits(.isHeader)
+
+                Spacer()
+
+                Button("Nova Conta", systemImage: "plus.circle.fill") {
+                    isAddingAccount = true
+                }
+                .font(Theme.Typography.subheadline)
+                .foregroundStyle(Theme.Colors.primary)
+            }
+
             if accounts.isEmpty {
-                FallbackGlassContainer {
-                    Text("Nenhuma conta cadastrada.")
-                        .font(Theme.Typography.body)
-                        .secondaryTextColor()
-                        .padding()
-                        .frame(maxWidth: .infinity, alignment: .leading)
+                PremiumGlassContainer(cornerRadius: Theme.Layout.cornerRadius, padding: 24) {
+                    ContentUnavailableView(
+                        "Nenhuma conta cadastrada",
+                        systemImage: "building.columns",
+                        description: Text("Adicione uma conta para acompanhar seu saldo.")
+                    )
                 }
             } else {
-                ForEach(accounts) { account in
-                    FallbackGlassContainer {
-                        HStack {
-                            ZStack {
-                                Circle()
-                                    .fill(Color(hex: account.colorHex))
-                                    .frame(width: 40, height: 40)
-                                
-                                Image(systemName: account.iconSystemName)
-                                    .font(.system(size: 20, weight: .semibold))
-                                    .foregroundStyle(.white)
+                FallbackGlassContainer(spacing: 12) {
+                    VStack(spacing: 12) {
+                        ForEach(accounts) { account in
+                            Button {
+                                accountToEdit = account
+                            } label: {
+                                AccountRowView(
+                                    account: account,
+                                    isBalanceVisible: isBalanceVisible
+                                )
                             }
-                            
-                            VStack(alignment: .leading) {
-                                Text(account.name)
-                                    .font(Theme.Typography.body)
-                                    .primaryTextColor()
-                            }
-                            
-                            Spacer()
-                            
-                            Text(isBalanceVisible ? formatCurrency(account.currentBalanceCents) : "R$ •••••")
-                                .font(Theme.Typography.headline)
-                                .primaryTextColor()
-                                .contentTransition(.numericText())
+                            .buttonStyle(.plain)
                         }
-                        .padding()
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .glassEffectWithFallback(in: .rect(cornerRadius: Theme.Layout.cornerRadius))
-                    }
-                    .buttonStyle(.plain)
-                    .onTapGesture {
-                        accountToEdit = account
                     }
                 }
             }
         }
-    }
-    
-    private var creditCardsSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Cartões de Crédito")
-                .font(Theme.Typography.headline)
-                .primaryTextColor()
-            
-            FallbackGlassContainer {
-                HStack {
-                    Image(systemName: "creditcard.circle.fill")
-                        .font(.system(size: 40))
-                        .foregroundStyle(Theme.Colors.primary)
-                    
-                    VStack(alignment: .leading) {
-                        Text("Cartão Nubank")
-                            .font(Theme.Typography.body)
-                            .primaryTextColor()
-                        Text("Fatura atual")
-                            .font(Theme.Typography.caption1)
-                            .secondaryTextColor()
-                    }
-                    
-                    Spacer()
-                    
-                    Text(isBalanceVisible ? formatCurrency(120500) : "R$ •••••")
-                        .font(Theme.Typography.headline)
-                        .foregroundStyle(Theme.Colors.error) // Red for expenses
-                        .contentTransition(.numericText())
-                }
-                .padding()
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .glassEffectWithFallback(in: .rect(cornerRadius: Theme.Layout.cornerRadius))
-            }
-        }
-    }
-    
-    // MARK: - Helpers
-    
-    private func formatCurrency(_ cents: Int) -> String {
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .currency
-        formatter.currencyCode = "BRL"
-        formatter.locale = Locale(identifier: "pt_BR")
-        
-        let doubleValue = Double(cents) / 100.0
-        return formatter.string(from: NSNumber(value: doubleValue)) ?? "R$ 0,00"
-    }
-    
-    private func formatAmount(_ cents: Int) -> String {
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .decimal
-        formatter.minimumFractionDigits = 2
-        formatter.maximumFractionDigits = 2
-        formatter.locale = Locale(identifier: "pt_BR")
-        
-        let doubleValue = Double(cents) / 100.0
-        return formatter.string(from: NSNumber(value: doubleValue)) ?? "0,00"
     }
 }
-
-

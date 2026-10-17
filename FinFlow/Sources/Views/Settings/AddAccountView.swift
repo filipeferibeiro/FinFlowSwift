@@ -1,48 +1,20 @@
 import SwiftUI
 import SwiftData
 
-struct AccountColor: Identifiable, Hashable {
-    let id = UUID()
-    let name: String
-    let hex: String
-}
-
-let availableAccountColors: [AccountColor] = [
-    AccountColor(name: "Laranja", hex: "#FF6B00"),
-    AccountColor(name: "Amarelo", hex: "#FFCC00"),
-    AccountColor(name: "Verde", hex: "#34C759"),
-    AccountColor(name: "Ciano", hex: "#32ADE6"),
-    AccountColor(name: "Azul", hex: "#007AFF"),
-    AccountColor(name: "Índigo", hex: "#5856D6"),
-    AccountColor(name: "Roxo", hex: "#AF52DE"),
-    AccountColor(name: "Rosa", hex: "#FF2D55"),
-    AccountColor(name: "Vermelho", hex: "#FF3B30"),
-    AccountColor(name: "Marrom", hex: "#A2845E"),
-    AccountColor(name: "Cinza", hex: "#8E8E93"),
-    AccountColor(name: "Preto", hex: "#1A1A1A")
-]
-
-let financeIcons = [
-    "building.columns.fill", "creditcard.fill", "wallet.pass.fill", "dollarsign.circle.fill", 
-    "bag.fill", "chart.pie.fill", "briefcase.fill", "banknote.fill", "cart.fill", 
-    "bitcoinsign.circle.fill", "centsign.circle.fill", "sterlingsign.circle.fill", 
-    "yensign.circle.fill", "pills.fill", "cross.case.fill", "airplane", "car.fill", 
-    "house.fill", "display", "macbook", "iphone", "gamecontroller.fill", 
-    "graduationcap.fill", "book.fill", "fork.knife", "cup.and.saucer.fill",
-    "gift.fill", "heart.fill", "star.fill", "bolt.fill", "flame.fill"
-]
-
 struct AddAccountView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
-    
+
+    @ScaledMetric(relativeTo: .largeTitle) private var monetaryInputSize: Double = 48
+
     @State private var name: String
     @State private var initialBalanceCents: Int
     @State private var iconSystemName: String
     @State private var colorHex: String
-    
-    var accountToEdit: Account?
-    
+    @State private var showingDeleteConfirmation = false
+
+    let accountToEdit: Account?
+
     init(accountToEdit: Account? = nil) {
         self.accountToEdit = accountToEdit
         _name = State(initialValue: accountToEdit?.name ?? "")
@@ -50,49 +22,64 @@ struct AddAccountView: View {
         _iconSystemName = State(initialValue: accountToEdit?.iconSystemName ?? "building.columns.fill")
         _colorHex = State(initialValue: accountToEdit?.colorHex ?? "#FF6B00")
     }
-    
+
     var body: some View {
         NavigationStack {
             BaseView {
-                ScrollView(.vertical, showsIndicators: false) {
+                ScrollView {
                     VStack(spacing: 24) {
-                        
-                        // 1. Live Preview Card
                         previewCard
                             .padding(.top, 16)
-                        
-                        // 2. Huge Balance Input
+
                         monetaryInput
-                        
-                        // 1. Name Input
-                        GlassTextField(title: "Nome da Conta", placeholder: "Ex: Nubank, Itaú, Carteira...", text: $name)
-                        
-                        // 2. Huge Monetary Inputte
+
+                        GlassTextField(
+                            title: "Nome da Conta",
+                            placeholder: "Ex: Nubank, Itaú, Carteira...",
+                            text: $name
+                        )
+
                         colorPaletteSection
-                        
-                        // 5. Icon Selector
+
                         iconSelectorSection
-                        
+
                         if let account = accountToEdit {
                             Button(role: .destructive) {
-                                modelContext.delete(account)
-                                dismiss()
+                                showingDeleteConfirmation = true
                             } label: {
                                 Text("Remover Conta")
                                     .font(Theme.Typography.headline)
                                     .frame(maxWidth: .infinity)
                                     .padding()
-                                    .background(Theme.Colors.error.opacity(0.15), in: .rect(cornerRadius: Theme.Layout.buttonCornerRadius))
+                                    .background(
+                                        Theme.Colors.error.opacity(0.15),
+                                        in: .rect(cornerRadius: Theme.Layout.buttonCornerRadius)
+                                    )
                                     .foregroundStyle(Theme.Colors.error)
                             }
                             .padding(.top, 16)
+                            .confirmationDialog(
+                                "Remover Conta",
+                                isPresented: $showingDeleteConfirmation,
+                                titleVisibility: .visible
+                            ) {
+                                Button("Remover Conta e Transações", role: .destructive) {
+                                    modelContext.delete(account)
+                                    dismiss()
+                                }
+                                Button("Cancelar", role: .cancel) {}
+                            } message: {
+                                Text("Deseja realmente remover a conta '\(account.name)'? Todas as transações vinculadas a ela também serão apagadas.")
+                            }
                         }
-                        
-                        Spacer().frame(height: 40)
+
+                        Spacer()
+                            .frame(height: 40)
                     }
                     .padding(.horizontal)
                 }
-                .clipShape(Rectangle().inset(by: -100))
+                .scrollIndicators(.hidden)
+                .scrollClipDisabled()
             }
             .navigationTitle(accountToEdit != nil ? "Editar Conta" : "Nova Conta")
             .navigationBarTitleDisplayMode(.inline)
@@ -102,7 +89,7 @@ struct AddAccountView: View {
                         .foregroundStyle(Theme.Colors.primary)
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Salvar") { save() }
+                    Button("Salvar", action: save)
                         .font(.headline)
                         .foregroundStyle(isValid ? Theme.Colors.primary : Theme.Colors.textSecondary)
                         .disabled(!isValid)
@@ -110,68 +97,74 @@ struct AddAccountView: View {
             }
         }
     }
-    
+
     // MARK: - Components
-    
+
     private var previewCard: some View {
-        HStack {
+        let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        return HStack(spacing: 12) {
             ZStack {
                 Circle()
                     .fill(Color(hex: colorHex))
                     .frame(width: 48, height: 48)
-                
+
                 Image(systemName: iconSystemName)
-                    .font(.system(size: 24, weight: .semibold))
+                    .font(.title3.weight(.semibold))
                     .foregroundStyle(.white)
             }
-            
+            .accessibilityHidden(true)
+
             VStack(alignment: .leading, spacing: 4) {
-                Text(name.isEmpty ? "Nome da Conta" : name)
+                Text(trimmedName.isEmpty ? "Nome da Conta" : trimmedName)
                     .font(Theme.Typography.headline)
-                    .foregroundStyle(name.isEmpty ? Theme.Colors.textSecondary : Theme.Colors.textPrimary)
+                    .foregroundStyle(trimmedName.isEmpty ? Theme.Colors.textSecondary : Theme.Colors.textPrimary)
                     .lineLimit(1)
-                
-                Text(formatCurrency(initialBalanceCents))
+
+                Text(CurrencyFormatter.formatCurrency(initialBalanceCents))
                     .font(Theme.Typography.body)
                     .secondaryTextColor()
             }
-            
+
             Spacer()
-            
+
             Image(systemName: "checkmark.seal.fill")
                 .font(.title2)
                 .foregroundStyle(Color(hex: colorHex).opacity(isValid ? 1.0 : 0.0))
+                .accessibilityHidden(true)
         }
         .padding()
         .frame(maxWidth: .infinity, alignment: .leading)
         .glassEffectWithFallback(in: .rect(cornerRadius: Theme.Layout.cardCornerRadius))
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Pré-visualização da conta: \(trimmedName.isEmpty ? "Sem nome" : trimmedName), saldo inicial \(CurrencyFormatter.formatCurrency(initialBalanceCents))")
     }
-    
+
     private var monetaryInput: some View {
         VStack(spacing: 8) {
             Text("SALDO INICIAL")
                 .font(Theme.Typography.caption1)
                 .secondaryTextColor()
-            
+
             HStack(alignment: .bottom, spacing: 4) {
                 Text("R$")
                     .font(Theme.Typography.title2)
                     .foregroundStyle(Theme.Colors.primary)
                     .padding(.bottom, 8)
-                
+
                 CurrencyTextField(valueInCents: $initialBalanceCents)
-                    .font(.system(size: 56, weight: .bold, design: .rounded))
+                    .font(.system(size: monetaryInputSize, weight: .bold, design: .rounded))
                     .foregroundStyle(Theme.Colors.textPrimary)
                     .multilineTextAlignment(.center)
             }
-            .frame(height: 80)
+            .frame(minHeight: 80)
             .padding(.horizontal)
             .padding(.vertical, 8)
             .glassEffectWithFallback(interactive: true)
         }
-        .padding(.vertical, 16)
+        .padding(.vertical, 8)
     }
-    
+
     private var colorPaletteSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
@@ -179,86 +172,92 @@ struct AddAccountView: View {
                     .font(Theme.Typography.caption1)
                     .secondaryTextColor()
                     .padding(.leading, 4)
-                
+
                 Spacer()
-                
-                if let selected = availableAccountColors.first(where: { $0.hex == colorHex }) {
+
+                if let selected = AccountColor.presets.first(where: { $0.hex == colorHex }) {
                     Text(selected.name)
                         .font(Theme.Typography.caption2)
                         .foregroundStyle(Color(hex: colorHex))
                 }
             }
-            
-            ScrollView(.horizontal, showsIndicators: false) {
-                ScrollViewReader { proxy in
+
+            ScrollViewReader { proxy in
+                ScrollView(.horizontal) {
                     HStack(spacing: 16) {
-                        ForEach(availableAccountColors) { accountColor in
+                        ForEach(AccountColor.presets) { accountColor in
                             let isSelected = colorHex == accountColor.hex
-                            
-                            Button(action: {
+
+                            Button {
                                 withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
                                     colorHex = accountColor.hex
                                 }
-                            }) {
+                            } label: {
                                 Circle()
                                     .fill(Color(hex: accountColor.hex))
                                     .frame(width: 44, height: 44)
-                                    .overlay(
+                                    .overlay {
                                         Circle()
                                             .stroke(Color.white, lineWidth: isSelected ? 3 : 0)
                                             .padding(2)
+                                    }
+                                    .shadow(
+                                        color: Color(hex: accountColor.hex).opacity(isSelected ? 0.6 : 0.0),
+                                        radius: 12,
+                                        x: 0,
+                                        y: 6
                                     )
-                                    .shadow(color: Color(hex: accountColor.hex).opacity(isSelected ? 0.7 : 0.0), radius: 15, x: 0, y: 8)
-                                    .scaleEffect(isSelected ? 1.2 : 1.0)
+                                    .scaleEffect(isSelected ? 1.15 : 1.0)
                             }
                             .buttonStyle(.plain)
                             .id(accountColor.hex)
+                            .accessibilityLabel(accountColor.name)
+                            .accessibilityAddTraits(isSelected ? .isSelected : [])
                         }
                     }
-                    .padding(.horizontal, 24)
-                    .padding(.vertical, 40)
-                    .onAppear {
-                        // Small delay to ensure the view is rendered before scrolling
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                            withAnimation(.spring) {
-                                proxy.scrollTo(colorHex, anchor: .center)
-                            }
-                        }
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 12)
+                }
+                .scrollIndicators(.hidden)
+                .scrollClipDisabled()
+                .task {
+                    withAnimation(.spring) {
+                        proxy.scrollTo(colorHex, anchor: .center)
                     }
-                    .onChange(of: colorHex) { _, newValue in
-                        withAnimation(.spring) {
-                            proxy.scrollTo(newValue, anchor: .center)
-                        }
+                }
+                .onChange(of: colorHex) { _, newValue in
+                    withAnimation(.spring) {
+                        proxy.scrollTo(newValue, anchor: .center)
                     }
                 }
             }
-            .padding(.horizontal, -16)
-            .padding(.vertical, -40)
         }
     }
-    
+
     private var iconSelectorSection: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("ÍCONE")
                 .font(Theme.Typography.caption1)
                 .secondaryTextColor()
                 .padding(.leading, 4)
-            
-            NavigationLink(destination: IconSelectionView(selectedIcon: $iconSystemName, themeColorHex: colorHex)) {
+
+            NavigationLink {
+                IconSelectionView(selectedIcon: $iconSystemName, themeColorHex: colorHex)
+            } label: {
                 HStack {
                     Image(systemName: iconSystemName)
-                        .font(.system(size: 28))
+                        .font(.title2)
                         .foregroundStyle(Color(hex: colorHex))
                         .frame(width: 40)
-                    
+
                     Text("Mudar Ícone")
                         .font(Theme.Typography.body)
                         .primaryTextColor()
-                    
+
                     Spacer()
-                    
+
                     Image(systemName: "chevron.right")
-                        .font(.system(size: 14))
+                        .font(.footnote)
                         .secondaryTextColor()
                 }
                 .padding()
@@ -267,32 +266,25 @@ struct AddAccountView: View {
             }
         }
     }
-    
+
     // MARK: - Helpers
-    
-    private func formatCurrency(_ cents: Int) -> String {
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .currency
-        formatter.currencyCode = "BRL"
-        formatter.locale = Locale(identifier: "pt_BR")
-        
-        let doubleValue = Double(cents) / 100.0
-        return formatter.string(from: NSNumber(value: doubleValue)) ?? "R$ 0,00"
-    }
-    
+
     private var isValid: Bool {
-        return !name.trimmingCharacters(in: .whitespaces).isEmpty
+        !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
-    
+
     private func save() {
+        let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedName.isEmpty else { return }
+
         if let account = accountToEdit {
-            account.name = name
+            account.name = trimmedName
             account.initialBalanceCents = initialBalanceCents
             account.iconSystemName = iconSystemName
             account.colorHex = colorHex
         } else {
             let newAccount = Account(
-                name: name,
+                name: trimmedName,
                 initialBalanceCents: initialBalanceCents,
                 iconSystemName: iconSystemName,
                 colorHex: colorHex
@@ -300,49 +292,5 @@ struct AddAccountView: View {
             modelContext.insert(newAccount)
         }
         dismiss()
-    }
-}
-
-// MARK: - Icon Selection View
-struct IconSelectionView: View {
-    @Binding var selectedIcon: String
-    var themeColorHex: String
-    @Environment(\.dismiss) private var dismiss
-    
-    let columns = [GridItem(.adaptive(minimum: 70), spacing: 16)]
-    
-    var body: some View {
-        BaseView {
-            ScrollView {
-                LazyVGrid(columns: columns, spacing: 20) {
-                    ForEach(financeIcons, id: \.self) { icon in
-                        Button(action: {
-                            withAnimation {
-                                selectedIcon = icon
-                                dismiss()
-                            }
-                        }) {
-                            VStack {
-                                Image(systemName: icon)
-                                    .font(.system(size: 32))
-                                    .frame(width: 70, height: 70)
-                                    .background(
-                                        Circle()
-                                            .fill(selectedIcon == icon ? Color(hex: themeColorHex).opacity(0.2) : Theme.Colors.surfaceSolid)
-                                    )
-                                    .overlay(
-                                        Circle()
-                                            .stroke(selectedIcon == icon ? Color(hex: themeColorHex) : Color.clear, lineWidth: 2)
-                                    )
-                                    .foregroundStyle(selectedIcon == icon ? Color(hex: themeColorHex) : Theme.Colors.textPrimary)
-                            }
-                        }
-                    }
-                }
-                .padding()
-            }
-        }
-        .navigationTitle("Escolher Ícone")
-        .navigationBarTitleDisplayMode(.inline)
     }
 }

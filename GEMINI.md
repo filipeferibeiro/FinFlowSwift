@@ -1,49 +1,43 @@
 # SwiftUI Best Practices and Guidelines
 
 ## Project Structure
-- **Sources**: Contains the main application files.
-  - **App**: Main application files.
-  - **Views**: Divided into sections like `Home` and `Profile`, each with their respective `ViewModels`.
-  - **Shared**: Reusable components and modifiers.
-  - **Models**: Data models.
-  - **ViewModels**: View-specific logic.
-  - **Services**: Includes `Network` for networking and `Persistence` for data storage.
-  - **Utilities**: Extensions, constants, and helper functions.
+- **Sources**: Contains the main application files (`FinFlow/Sources`).
+  - **App**: Main application entry point and root navigation (`FinFlowApp.swift`, `ContentView.swift`).
+  - **Views**: Divided into feature sections (`Home`, `Transactions`, `Settings`, `Onboarding`, `Main`), with extracted reusable subviews per file.
+  - **Shared**: Design system (`Theme.swift`) and reusable components/modifiers (`Components/`).
+  - **Models**: SwiftData `@Model` classes and domain value types (`Account.swift`, `Transaction.swift`, `TransactionType.swift`, `AccountColor.swift`, `OnboardingStep.swift`).
+  - **ViewModels**: `@Observable` view models managing presentation state (`OnboardingViewModel.swift`, `TransactionsViewModel.swift`).
+  - **Services**: Domain and persistence services (`TransactionService.swift`).
+  - **Utilities**: Shared formatters, date calculations, and helper functions (`CurrencyFormatter.swift`, `DateUtils.swift`).
 - **Resources**:
-  - **Assets**: Images and colors.
+  - **Assets**: Images and colors (`Assets.xcassets`).
   - **Localization**: Localized strings.
   - **Fonts**: Custom fonts.
 - **Tests**:
-  - **UnitTests**: Unit testing.
-  - **UITests**: UI testing.
+  - **UnitTests**: Unit testing using Swift Testing (`@Test`, `#expect`).
+  - **UITests**: UI testing using XCTest.
 
-## SwiftUI UI Design Rules
-1. **Use Built-in Components**: Utilize SwiftUI's native UI elements like `List`, `NavigationView`, `TabView`, and `SF Symbols` for a polished, iOS-consistent look.
-2. **Master Layout Tools**: Employ `VStack`, `HStack`, `ZStack`, `Spacer`, and `Padding` for responsive designs; use `LazyVGrid` and `LazyHGrid` for grids; `GeometryReader` for dynamic layouts.
-3. **Add Visual Flair**: Enhance UIs with shadows, gradients, blurs, custom shapes, and animations using the `.animation()` modifier for smooth transitions.
-4. **Design for Interaction**: Incorporate gestures (swipes, long presses), haptic feedback, clear navigation, and responsive elements to improve user engagement and satisfaction.
+## SwiftUI UI Design & HIG Rules
+1. **Use Modern Built-in Components**: Utilize SwiftUI's native elements like `List`, `NavigationStack`, `Tab` (`TabView`), `ContentUnavailableView`, and `SF Symbols` for an iOS-consistent look.
+2. **Master Layout Tools**: Employ `VStack`, `HStack`, `ZStack`, `Spacer`, and `LazyVGrid` / `LazyHGrid` for responsive designs; use `.scrollClipDisabled()` instead of negative padding hacks.
+3. **Liquid Glass & Visual Flair (iOS 26+)**: Enhance UIs with native `.glassEffect(_:in:)` and `GlassEffectContainer` (wrapped around grouped glass elements only), providing Material fallbacks via `glassEffectWithFallback` and `prominentGlassEffectWithFallback`. Always use `.animation(_:value:)` with an explicit value parameter.
+4. **Accessibility & Dynamic Type**:
+   - Use Dynamic Type fonts (`Font.system(.body)`, etc.) and `@ScaledMetric` for custom sizes; never hardcode unscaled font sizes.
+   - Use `Button` instead of `.onTapGesture` for interactive elements, enforce ≥ 44×44pt tap targets, and provide `.accessibilityLabel` for icon-only controls.
+   - Respect `@Environment(\.accessibilityReduceMotion)` for continuous or particle animations.
 
 ## Coding Standards
-- **Functional Components**: Prefer functional components and avoid class components.
-- **Variable Declarations**: Use `const` over `let` for variable declarations.
-- **Naming Conventions**: Use `camelCase` for variables and functions, and `PascalCase` for component names.
+- **Single Type Per File**: Place each primary `struct`, `class`, or `enum` in its own Swift file.
+- **Value Semantics & Immutability**: Prefer `struct` and `let` properties where mutation is not required.
+- **Naming Conventions**: Use `camelCase` for properties, variables, and functions, and `PascalCase` for types (`View`, `@Model`, `enum`, `struct`).
+- **Swift 6 Concurrency**: Respect `@MainActor` default actor isolation; mark persisted `Codable` enums `nonisolated` and use structured concurrency (`Task`, `Task.sleep(for:)`) instead of `DispatchQueue`.
 
-## Performance Optimization
-- **React.memo**: Use `React.memo` on pure function components.
-- **Lazy Loading**: Implement lazy loading for routing components.
-- **useEffect Dependencies**: Optimize `useEffect` dependencies to prevent unnecessary re-renders.
+## State Management & Performance Optimization
+- **Observation**: Use `@Observable` classes owned with `@State private var` and passed via `@Bindable` or `@Environment`.
+- **Single-Pass View Evaluation**: Compute derived collections (such as monthly filtered transactions and summaries) once per `body` pass rather than repeatedly inside multiple sub-properties.
+- **Stable Identity**: Ensure `ForEach` items use stable `Identifiable` IDs (including deterministic UUIDs for virtual recurring transactions).
+- **Cached Formatters**: Centralize `NumberFormatter` and `DateFormatter` instances in `Sources/Utilities/` instead of instantiating them inside view bodies or list rows.
 
-## Testing Requirements
-- **Unit Tests**: Write unit tests using `Jest` and `React Testing Library`.
-- **Test Coverage**: Ensure test coverage reaches at least 80%.
-- **Snapshot Testing**: Use snapshot testing for UI components.
-
-## Documentation
-- **JSDoc**: Write comments for functions and components in JSDoc format.
-- **PropTypes**: Components must include `PropTypes` validation.
-- **README.md**: Each main directory must contain a `README.md` file.
-- **Multilingual README**: Provide both English and Chinese versions of the `README.md` file.
-
-## Error Handling
-- **try/catch**: Use `try/catch` blocks to handle asynchronous operations.
-- **Error Boundary**: Implement a global error boundary component.
+## Error Handling & Safety
+- **No Silent Data Loss**: Always present a `.confirmationDialog` before destructive actions (deleting accounts, deleting transactions, or wiping app data).
+- **Do Not Swallow Errors**: Surface persistence errors to the user via `.alert` rather than printing to the console, and avoid force unwrapping (`!`).

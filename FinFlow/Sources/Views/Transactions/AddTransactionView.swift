@@ -5,76 +5,116 @@ struct AddTransactionView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
     @Namespace private var segmentNamespace
-    
+
+    @ScaledMetric(relativeTo: .largeTitle) private var monetaryInputSize: Double = 48
+
     @Query private var accounts: [Account]
-    
-    @State private var title: String = ""
-    @State private var amountCents: Int = 0
-    @State private var date: Date = Date()
-    @State private var isPaid: Bool = true
-    @State private var type: TransactionType = .expense
-    
+
+    @State private var title: String
+    @State private var amountCents: Int
+    @State private var date: Date
+    @State private var isPaid: Bool
+    @State private var type: TransactionType
+    @State private var isFixed: Bool
+
     @State private var selectedAccount: Account?
     @State private var targetAccount: Account?
-    
+
+    @State private var showingEditRecurringDialog = false
+    let transactionToEdit: Transaction?
+
+    init(transactionToEdit: Transaction? = nil) {
+        self.transactionToEdit = transactionToEdit
+        _title = State(initialValue: transactionToEdit?.title ?? "")
+        _amountCents = State(initialValue: transactionToEdit?.amountCents ?? 0)
+        _date = State(initialValue: transactionToEdit?.date ?? .now)
+        _isPaid = State(initialValue: transactionToEdit?.isPaid ?? true)
+        _type = State(initialValue: transactionToEdit?.type ?? .expense)
+        _isFixed = State(initialValue: transactionToEdit?.isFixed ?? false)
+        _selectedAccount = State(initialValue: transactionToEdit?.account)
+        _targetAccount = State(initialValue: transactionToEdit?.targetAccount)
+    }
+
     var body: some View {
         NavigationStack {
             BaseView {
-                ScrollView(.vertical, showsIndicators: false) {
+                ScrollView {
                     VStack(spacing: 24) {
-                        
-                        // 1. Transaction Type Glass Selector
                         typeSelector
                             .padding(.top, 16)
-                        
-                        // 2. Huge Monetary Input
+
                         monetaryInput
-                        
-                        // 3. Title TextField
-                        GlassTextField(title: "Título da Transação", placeholder: "Ex: Almoço, Netflix, Salário...", text: $title)
-                        
-                        // 4. Accounts Selection
+
+                        GlassTextField(
+                            title: "Título da Transação",
+                            placeholder: "Ex: Almoço, Netflix, Salário...",
+                            text: $title
+                        )
+
                         VStack(spacing: 16) {
-                            accountSelector(label: type == .transfer ? "Origem" : "Conta", selection: $selectedAccount, filter: nil)
-                            
+                            accountSelector(
+                                label: type == .transfer ? "Conta de Origem" : "Conta",
+                                selection: $selectedAccount,
+                                excluding: nil
+                            )
+
                             if type == .transfer {
                                 Image(systemName: "arrow.down")
-                                    .font(.system(size: 24, weight: .bold))
+                                    .font(.title2.bold())
                                     .foregroundStyle(Theme.Colors.textSecondary)
-                                
-                                accountSelector(label: "Destino", selection: $targetAccount, filter: selectedAccount)
+                                    .accessibilityHidden(true)
+
+                                accountSelector(
+                                    label: "Conta de Destino",
+                                    selection: $targetAccount,
+                                    excluding: selectedAccount
+                                )
                             }
                         }
-                        
-                        // 5. Date and Paid Status
-                        HStack(spacing: 16) {
-                            FallbackGlassContainer {
+
+                        FallbackGlassContainer(spacing: 16) {
+                            HStack(spacing: 16) {
                                 DatePicker("Data", selection: $date, displayedComponents: .date)
                                     .labelsHidden()
                                     .padding()
                                     .frame(maxWidth: .infinity)
                                     .glassEffectWithFallback(in: .rect(cornerRadius: Theme.Layout.cornerRadius))
-                            }
-                            
-                            FallbackGlassContainer {
+
                                 Toggle(isOn: $isPaid) {
                                     Text(isPaid ? "Pago" : "Pendente")
                                         .font(Theme.Typography.subheadline)
                                         .primaryTextColor()
                                 }
-                                .tint(typeColor)
+                                .tint(type.color)
                                 .padding()
                                 .frame(maxWidth: .infinity)
                                 .glassEffectWithFallback(in: .rect(cornerRadius: Theme.Layout.cornerRadius))
                             }
                         }
-                        
-                        Spacer().frame(height: 40)
+
+                        Toggle(isOn: $isFixed) {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Transação Fixa")
+                                    .font(Theme.Typography.subheadline)
+                                    .primaryTextColor()
+                                Text("Repetir todos os meses")
+                                    .font(Theme.Typography.caption2)
+                                    .secondaryTextColor()
+                            }
+                        }
+                        .tint(Theme.Colors.primary)
+                        .padding()
+                        .frame(maxWidth: .infinity)
+                        .glassEffectWithFallback(in: .rect(cornerRadius: Theme.Layout.cornerRadius))
+
+                        Spacer()
+                            .frame(height: 40)
                     }
                     .padding(.horizontal)
                 }
+                .scrollIndicators(.hidden)
             }
-            .navigationTitle("Nova Transação")
+            .navigationTitle(transactionToEdit != nil ? "Editar Transação" : "Nova Transação")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -82,7 +122,7 @@ struct AddTransactionView: View {
                         .foregroundStyle(Theme.Colors.primary)
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Salvar") { save() }
+                    Button("Salvar", action: save)
                         .font(.headline)
                         .foregroundStyle(isValid ? Theme.Colors.primary : Theme.Colors.textSecondary)
                         .disabled(!isValid)
@@ -92,91 +132,121 @@ struct AddTransactionView: View {
                 if selectedAccount == nil {
                     selectedAccount = accounts.first
                 }
+                ensureValidTransferAccounts()
+            }
+            .onChange(of: type) { _, _ in
+                ensureValidTransferAccounts()
+            }
+            .onChange(of: selectedAccount) { _, _ in
+                ensureValidTransferAccounts()
             }
             .onChange(of: date) { oldDate, newDate in
-                let isFuture = Calendar.current.startOfDay(for: newDate) > Calendar.current.startOfDay(for: Date())
-                withAnimation { isPaid = !isFuture }
+                guard !Calendar.current.isDate(oldDate, inSameDayAs: newDate) else { return }
+                let isFuture = Calendar.current.startOfDay(for: newDate) > Calendar.current.startOfDay(for: .now)
+                withAnimation {
+                    isPaid = !isFuture
+                }
+            }
+            .confirmationDialog(
+                "Editar Transação Fixa",
+                isPresented: $showingEditRecurringDialog,
+                titleVisibility: .visible
+            ) {
+                Button("Editar apenas esta") {
+                    if let tx = transactionToEdit {
+                        TransactionService.saveRecurringOverride(draft: currentDraft, for: tx, in: modelContext)
+                    }
+                    dismiss()
+                }
+
+                Button("Editar esta e as próximas") {
+                    if let tx = transactionToEdit {
+                        TransactionService.saveRecurringFuture(draft: currentDraft, for: tx, in: modelContext)
+                    }
+                    dismiss()
+                }
+
+                Button("Cancelar", role: .cancel) {}
+            } message: {
+                Text("Deseja aplicar as alterações apenas a esta transação ou a todas as seguintes?")
             }
         }
     }
-    
+
     // MARK: - Components
-    
-    private var typeColor: Color {
-        switch type {
-        case .income: return Theme.Colors.success
-        case .expense: return Theme.Colors.error
-        case .transfer: return Theme.Colors.primary
-        }
-    }
-    
+
     private var typeSelector: some View {
-        HStack(spacing: 0) {
-            let options: [TransactionType] = accounts.count > 1 ? [.expense, .income, .transfer] : [.expense, .income]
-            
-            ForEach(options, id: \.self) { opt in
-                Button(action: {
+        let options: [TransactionType] = accounts.count > 1 ? [.expense, .income, .transfer] : [.expense, .income]
+
+        return HStack(spacing: 0) {
+            ForEach(options) { opt in
+                Button {
                     withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
                         type = opt
                     }
-                }) {
-                    Text(titleFor(opt))
+                } label: {
+                    Text(opt.title)
                         .font(Theme.Typography.subheadline)
                         .foregroundStyle(type == opt ? .white : Theme.Colors.textSecondary)
                         .padding(.vertical, 12)
                         .frame(maxWidth: .infinity)
-                        .background(
-                            ZStack {
-                                if type == opt {
-                                    Capsule()
-                                        .fill(typeColor)
-                                        .shadow(color: typeColor.opacity(0.4), radius: 8, x: 0, y: 4)
-                                        .matchedGeometryEffect(id: "GLASS_SEGMENT", in: segmentNamespace)
-                                }
+                        .background {
+                            if type == opt {
+                                Capsule()
+                                    .fill(type.color)
+                                    .shadow(color: type.color.opacity(0.4), radius: 8, x: 0, y: 4)
+                                    .matchedGeometryEffect(id: "GLASS_SEGMENT", in: segmentNamespace)
                             }
-                        )
+                        }
                 }
+                .accessibilityAddTraits(type == opt ? .isSelected : [])
             }
         }
         .padding(4)
         .glassEffectWithFallback(in: .capsule)
     }
-    
+
     private var monetaryInput: some View {
         VStack(spacing: 8) {
             Text("VALOR")
                 .font(Theme.Typography.caption1)
                 .secondaryTextColor()
-            
+
             HStack(alignment: .bottom, spacing: 4) {
                 Text("R$")
                     .font(Theme.Typography.title2)
-                    .foregroundStyle(typeColor)
+                    .foregroundStyle(type.color)
                     .padding(.bottom, 8)
-                
+
                 CurrencyTextField(valueInCents: $amountCents)
-                    .font(.system(size: 56, weight: .bold, design: .rounded))
+                    .font(.system(size: monetaryInputSize, weight: .bold, design: .rounded))
                     .foregroundStyle(Theme.Colors.textPrimary)
                     .multilineTextAlignment(.center)
             }
-            .frame(height: 80)
+            .frame(minHeight: 80)
             .padding(.horizontal)
             .padding(.vertical, 8)
             .glassEffectWithFallback(interactive: true)
         }
-        .padding(.vertical, 16)
+        .padding(.vertical, 8)
     }
-    
+
     @ViewBuilder
-    private func accountSelector(label: String, selection: Binding<Account?>, filter: Account?) -> some View {
+    private func accountSelector(
+        label: String,
+        selection: Binding<Account?>,
+        excluding excludedAccount: Account?
+    ) -> some View {
+        let availableAccounts = accounts.filter { $0.id != excludedAccount?.id }
+
         VStack(alignment: .leading, spacing: 8) {
             Text(label.uppercased())
                 .font(Theme.Typography.caption1)
                 .secondaryTextColor()
                 .padding(.leading, 4)
-            
+
             Menu {
-                ForEach(accounts.filter { $0.id != filter?.id }) { account in
+                ForEach(availableAccounts) { account in
                     Button {
                         selection.wrappedValue = account
                     } label: {
@@ -184,85 +254,91 @@ struct AddTransactionView: View {
                     }
                 }
             } label: {
-                FallbackGlassContainer {
-                    HStack {
-                        if let account = selection.wrappedValue {
-                            Image(systemName: account.iconSystemName)
-                                .font(.system(size: 32))
-                                .foregroundStyle(Color(hex: account.colorHex))
-                            
-                            VStack(alignment: .leading) {
-                                Text(account.name)
-                                    .font(Theme.Typography.headline)
-                                    .primaryTextColor()
-                                
-                                Text(formatCurrency(account.currentBalanceCents))
-                                    .font(Theme.Typography.caption1)
-                                    .secondaryTextColor()
-                            }
-                        } else {
-                            Image(systemName: "questionmark.circle.fill")
-                                .font(.system(size: 32))
-                                .foregroundStyle(Theme.Colors.textSecondary)
-                            
-                            Text("Selecione uma conta")
+                HStack(spacing: 12) {
+                    if let account = selection.wrappedValue {
+                        Image(systemName: account.iconSystemName)
+                            .font(.title2)
+                            .foregroundStyle(Color(hex: account.colorHex))
+                            .frame(width: 36)
+
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(account.name)
                                 .font(Theme.Typography.headline)
+                                .primaryTextColor()
+
+                            Text(CurrencyFormatter.formatCurrency(account.currentBalanceCents))
+                                .font(Theme.Typography.caption1)
                                 .secondaryTextColor()
                         }
-                        
-                        Spacer()
-                        
-                        Image(systemName: "chevron.up.chevron.down")
-                            .font(.system(size: 14))
+                    } else {
+                        Image(systemName: "questionmark.circle.fill")
+                            .font(.title2)
+                            .foregroundStyle(Theme.Colors.textSecondary)
+                            .frame(width: 36)
+
+                        Text("Selecione uma conta")
+                            .font(Theme.Typography.headline)
                             .secondaryTextColor()
                     }
-                    .padding()
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .glassEffectWithFallback(in: .rect(cornerRadius: Theme.Layout.cornerRadius))
+
+                    Spacer()
+
+                    Image(systemName: "chevron.up.chevron.down")
+                        .font(.footnote)
+                        .secondaryTextColor()
                 }
+                .padding()
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .glassEffectWithFallback(in: .rect(cornerRadius: Theme.Layout.cornerRadius))
             }
         }
     }
-    
+
     // MARK: - Helpers
-    
-    private func titleFor(_ type: TransactionType) -> String {
-        switch type {
-        case .income: return "Receita"
-        case .expense: return "Despesa"
-        case .transfer: return "Transferência"
-        }
-    }
-    
-    private func formatCurrency(_ cents: Int) -> String {
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .currency
-        formatter.currencyCode = "BRL"
-        formatter.locale = Locale(identifier: "pt_BR")
-        
-        let doubleValue = Double(cents) / 100.0
-        return formatter.string(from: NSNumber(value: doubleValue)) ?? "R$ 0,00"
-    }
-    
-    private var isValid: Bool {
-        guard !title.trimmingCharacters(in: .whitespaces).isEmpty, amountCents > 0, selectedAccount != nil else { return false }
-        if type == .transfer {
-            return targetAccount != nil
-        }
-        return true
-    }
-    
-    private func save() {
-        let transaction = Transaction(
+
+    private var currentDraft: TransactionDraft {
+        TransactionDraft(
             title: title,
             amountCents: amountCents,
             date: date,
             isPaid: isPaid,
             type: type,
+            isFixed: isFixed,
             account: selectedAccount,
-            targetAccount: type == .transfer ? targetAccount : nil
+            targetAccount: targetAccount
         )
-        modelContext.insert(transaction)
-        dismiss()
+    }
+
+    private var isValid: Bool {
+        guard !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+              amountCents > 0,
+              let origin = selectedAccount else {
+            return false
+        }
+        if type == .transfer {
+            guard let destination = targetAccount else { return false }
+            return destination.id != origin.id
+        }
+        return true
+    }
+
+    private func ensureValidTransferAccounts() {
+        guard type == .transfer else { return }
+        if targetAccount == nil || targetAccount?.id == selectedAccount?.id {
+            targetAccount = accounts.first { $0.id != selectedAccount?.id }
+        }
+    }
+
+    private func save() {
+        if let tx = transactionToEdit, tx.isFixed {
+            showingEditRecurringDialog = true
+        } else {
+            TransactionService.saveNewOrNonRecurring(
+                draft: currentDraft,
+                editing: transactionToEdit,
+                in: modelContext
+            )
+            dismiss()
+        }
     }
 }

@@ -2,7 +2,7 @@ import SwiftUI
 
 public struct ProminentGlassButtonStyle: ButtonStyle {
     public init() {}
-    
+
     public func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .font(Theme.Typography.headline)

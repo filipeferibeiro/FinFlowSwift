@@ -2,25 +2,21 @@ import SwiftUI
 
 public struct MainTabView: View {
     public init() {}
-    
+
     public var body: some View {
-        // Modern iOS/iPadOS tab view handling
         TabView {
-            HomeView()
-                .tabItem {
-                    Label("Início", systemImage: "house.fill")
-                }
-            
-            TransactionsView()
-                .tabItem {
-                    Label("Transações", systemImage: "arrow.up.arrow.down")
-                }
-            
-            SettingsView()
-                .tabItem {
-                    Label("Ajustes", systemImage: "gear")
-                }
+            Tab("Início", systemImage: "house.fill") {
+                HomeView()
+            }
+
+            Tab("Transações", systemImage: "arrow.up.arrow.down") {
+                TransactionsView()
+            }
+
+            Tab("Ajustes", systemImage: "gear") {
+                SettingsView()
+            }
         }
-        .tint(Theme.Colors.primary) // Make active tab icons match brand color
+        .tint(Theme.Colors.primary)
     }
 }
