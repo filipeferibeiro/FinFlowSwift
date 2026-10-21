@@ -35,7 +35,7 @@ public final class Account {
     @Transient public var currentBalanceCents: Int {
         var balance = initialBalanceCents
 
-        for tx in (transactions ?? []) where tx.isPaid {
+        for tx in (transactions ?? []) where tx.isPaid && tx.isActiveMaterializedOccurrence {
             switch tx.type {
             case .expense, .transfer:
                 balance -= tx.amountCents
@@ -44,7 +44,7 @@ public final class Account {
             }
         }
 
-        for tx in (incomingTransfers ?? []) where tx.isPaid && tx.type == .transfer {
+        for tx in (incomingTransfers ?? []) where tx.isPaid && tx.type == .transfer && tx.isActiveMaterializedOccurrence {
             balance += tx.amountCents
         }
 

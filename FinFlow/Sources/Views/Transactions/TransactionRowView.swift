@@ -41,20 +41,20 @@ public struct TransactionRowView: View {
         ZStack {
             PremiumGlassContainer(cornerRadius: Theme.Layout.cornerRadius, padding: 12) {
                 HStack(spacing: 12) {
-                    RoundedRectangle(cornerRadius: 14)
-                        .fill(typeColor.opacity(0.15))
-                        .frame(width: 46, height: 46)
+                    RoundedRectangle(cornerRadius: 11)
+                        .fill(typeColor.opacity(0.12))
+                        .frame(width: 40, height: 40)
                         .overlay {
                             Image(systemName: iconName)
-                                .font(.headline.bold())
+                                .font(.subheadline.weight(.semibold))
                                 .foregroundStyle(typeColor)
                         }
                         .accessibilityHidden(true)
 
-                    VStack(alignment: .leading, spacing: 4) {
+                    VStack(alignment: .leading, spacing: 3) {
                         HStack(spacing: 6) {
                             Text(transaction.title)
-                                .font(Theme.Typography.headline)
+                                .font(Theme.Typography.subheadline)
                                 .primaryTextColor()
                                 .lineLimit(1)
 
@@ -63,49 +63,45 @@ public struct TransactionRowView: View {
                                     .font(Theme.Typography.caption2)
                                     .foregroundStyle(Theme.Colors.primary)
                                     .padding(.horizontal, 6)
-                                    .padding(.vertical, 2)
-                                    .background(Theme.Colors.primary.opacity(0.14), in: .capsule)
+                                    .padding(.vertical, 1)
+                                    .background(Theme.Colors.primary.opacity(0.12), in: .capsule)
                             } else if let installmentBadge = transaction.installmentBadgeText {
                                 Text(installmentBadge)
                                     .font(Theme.Typography.caption2)
                                     .foregroundStyle(Theme.Colors.primary)
                                     .padding(.horizontal, 6)
-                                    .padding(.vertical, 2)
-                                    .background(Theme.Colors.primary.opacity(0.14), in: .capsule)
+                                    .padding(.vertical, 1)
+                                    .background(Theme.Colors.primary.opacity(0.12), in: .capsule)
                                     .accessibilityLabel("Parcela \(installmentBadge)")
                             } else if transaction.isFixed {
                                 Image(systemName: "repeat")
-                                    .font(.caption2.bold())
-                                    .foregroundStyle(Theme.Colors.primary)
-                                    .padding(4)
-                                    .background(Theme.Colors.primary.opacity(0.14), in: .circle)
+                                    .font(.caption2)
+                                    .foregroundStyle(Theme.Colors.textSecondary)
                                     .accessibilityLabel("Recorrente")
                             }
                         }
 
                         Text(transaction.accountDisplayTitle)
-                            .font(Theme.Typography.caption1)
+                            .font(Theme.Typography.caption2)
                             .secondaryTextColor()
                             .lineLimit(1)
                     }
 
                     Spacer()
 
-                    VStack(alignment: .trailing, spacing: 4) {
+                    VStack(alignment: .trailing, spacing: 3) {
                         Text(formattedAmount)
                             .font(.system(.subheadline, design: .rounded).bold())
                             .foregroundStyle(isInvoice ? Theme.Colors.error : typeColor)
 
                         HStack(spacing: 4) {
-                            Image(systemName: transaction.isPaid ? "checkmark.circle.fill" : "clock.fill")
+                            Image(systemName: transaction.isPaid ? "checkmark.circle.fill" : "clock")
                                 .font(.caption2)
+                                .foregroundStyle(statusColor)
                             Text(statusText)
                                 .font(Theme.Typography.caption2)
+                                .secondaryTextColor()
                         }
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 3)
-                        .background(statusColor.opacity(0.16), in: .capsule)
-                        .foregroundStyle(statusColor)
                     }
                 }
             }

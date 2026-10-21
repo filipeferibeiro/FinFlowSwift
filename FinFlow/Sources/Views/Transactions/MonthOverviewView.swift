@@ -10,41 +10,100 @@ public struct MonthOverviewView: View {
     }
 
     public var body: some View {
-        VStack(spacing: 12) {
-            // Top Consolidated Balance Bar
-            PremiumGlassContainer(cornerRadius: Theme.Layout.cornerRadius, padding: 16) {
-                HStack(spacing: 16) {
-                    overviewMetric(
-                        title: "SALDO ATUAL",
-                        amountCents: summary.currentBalanceCents,
-                        color: Theme.Colors.primary
-                    )
+        PremiumGlassContainer(cornerRadius: Theme.Layout.cornerRadius, padding: 14) {
+            VStack(spacing: 12) {
+                // Top Row: Saldo Atual (com Saldo Anterior) & Previsto no Mês (com Balanço Mensal)
+                HStack(spacing: 14) {
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text("Saldo atual")
+                            .font(Theme.Typography.caption2)
+                            .secondaryTextColor()
+
+                        Text(formatValue(summary.currentBalanceCents))
+                            .font(.system(.headline, design: .rounded).bold())
+                            .foregroundStyle(
+                                summary.currentBalanceCents < 0 ? Theme.Colors.error : Theme.Colors.textPrimary
+                            )
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.75)
+                            .contentTransition(.numericText())
+
+                        HStack(spacing: 3) {
+                            Text("Anterior:")
+                                .font(Theme.Typography.caption2)
+                                .foregroundStyle(Theme.Colors.textTertiary)
+
+                            Text(formatValue(summary.previousBalanceCents))
+                                .font(.system(.caption2, design: .rounded).weight(.medium))
+                                .secondaryTextColor()
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.75)
+                        }
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .accessibilityElement(children: .combine)
 
                     Divider()
-                        .frame(height: 36)
+                        .frame(height: 44)
 
-                    overviewMetric(
-                        title: "PREVISTO NO MÊS",
-                        amountCents: summary.expectedBalanceCents,
-                        color: Theme.Colors.textPrimary
-                    )
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text("Previsto no mês")
+                            .font(Theme.Typography.caption2)
+                            .secondaryTextColor()
+
+                        Text(formatValue(summary.expectedBalanceCents))
+                            .font(.system(.headline, design: .rounded).bold())
+                            .foregroundStyle(
+                                summary.expectedBalanceCents < 0 ? Theme.Colors.error : Theme.Colors.primary
+                            )
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.75)
+                            .contentTransition(.numericText())
+
+                        HStack(spacing: 3) {
+                            Text("Balanço:")
+                                .font(Theme.Typography.caption2)
+                                .foregroundStyle(Theme.Colors.textTertiary)
+
+                            Text(formatSignedValue(summary.monthBalanceCents))
+                                .font(.system(.caption2, design: .rounded).weight(.semibold))
+                                .foregroundStyle(
+                                    summary.monthBalanceCents >= 0 ? Theme.Colors.success : Theme.Colors.error
+                                )
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.75)
+                        }
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .accessibilityElement(children: .combine)
                 }
-            }
 
-            // Income & Expense Cards
-            FallbackGlassContainer(spacing: 12) {
-                HStack(spacing: 12) {
-                    overviewCard(
+                Divider()
+
+                // Bottom Row: Entradas (Recebido / Previsto) & Saídas (Pago / Previsto)
+                HStack(spacing: 14) {
+                    flowColumn(
                         title: "Entradas",
                         icon: "arrow.down.left",
-                        amountCents: summary.monthIncomeCents,
+                        totalCents: summary.monthIncomeCents,
+                        realizedLabel: "Recebido",
+                        realizedCents: summary.paidIncomeCents,
+                        pendingLabel: "Previsto",
+                        pendingCents: summary.unpaidIncomeCents,
                         color: Theme.Colors.success
                     )
 
-                    overviewCard(
+                    Divider()
+                        .frame(height: 48)
+
+                    flowColumn(
                         title: "Saídas",
                         icon: "arrow.up.right",
-                        amountCents: summary.monthExpenseCents,
+                        totalCents: summary.monthExpenseCents,
+                        realizedLabel: "Pago",
+                        realizedCents: summary.paidExpenseCents,
+                        pendingLabel: "Previsto",
+                        pendingCents: summary.unpaidExpenseCents,
                         color: Theme.Colors.error
                     )
                 }
@@ -52,50 +111,75 @@ public struct MonthOverviewView: View {
         }
     }
 
-    private func overviewMetric(title: String, amountCents: Int, color: Color) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(title)
-                .font(Theme.Typography.caption2)
-                .secondaryTextColor()
+    private func flowColumn(
+        title: String,
+        icon: String,
+        totalCents: Int,
+        realizedLabel: String,
+        realizedCents: Int,
+        pendingLabel: String,
+        pendingCents: Int,
+        color: Color
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 5) {
+            HStack(spacing: 4) {
+                Image(systemName: icon)
+                    .font(.caption2.bold())
+                    .foregroundStyle(color)
 
-            Text(isBalanceVisible ? CurrencyFormatter.formatCurrency(amountCents) : "R$ •••••")
-                .font(.system(.headline, design: .rounded).bold())
-                .foregroundStyle(color)
-                .lineLimit(1)
-                .minimumScaleFactor(0.75)
+                Text(title)
+                    .font(Theme.Typography.caption2)
+                    .secondaryTextColor()
+
+                Spacer(minLength: 4)
+
+                Text(formatValue(totalCents))
+                    .font(.system(.caption, design: .rounded).bold())
+                    .foregroundStyle(color)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
+                    .contentTransition(.numericText())
+            }
+
+            HStack {
+                Text(realizedLabel)
+                    .font(Theme.Typography.caption2)
+                    .foregroundStyle(Theme.Colors.textTertiary)
+
+                Spacer(minLength: 4)
+
+                Text(formatValue(realizedCents))
+                    .font(.system(.caption2, design: .rounded).weight(.medium))
+                    .secondaryTextColor()
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
+            }
+
+            HStack {
+                Text(pendingLabel)
+                    .font(Theme.Typography.caption2)
+                    .foregroundStyle(Theme.Colors.textTertiary)
+
+                Spacer(minLength: 4)
+
+                Text(formatValue(pendingCents))
+                    .font(.system(.caption2, design: .rounded).weight(.medium))
+                    .secondaryTextColor()
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .accessibilityElement(children: .combine)
     }
 
-    private func overviewCard(title: String, icon: String, amountCents: Int, color: Color) -> some View {
-        PremiumGlassContainer(cornerRadius: Theme.Layout.cornerRadius, padding: 14) {
-            HStack(spacing: 10) {
-                RoundedRectangle(cornerRadius: 10)
-                    .fill(color.opacity(0.15))
-                    .frame(width: 36, height: 36)
-                    .overlay {
-                        Image(systemName: icon)
-                            .font(.subheadline.bold())
-                            .foregroundStyle(color)
-                    }
+    private func formatValue(_ cents: Int) -> String {
+        isBalanceVisible ? CurrencyFormatter.formatCurrency(cents) : "R$ ••••"
+    }
 
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(title)
-                        .font(Theme.Typography.caption1)
-                        .secondaryTextColor()
-
-                    Text(isBalanceVisible ? CurrencyFormatter.formatCurrency(amountCents) : "R$ •••••")
-                        .font(.system(.subheadline, design: .rounded).bold())
-                        .primaryTextColor()
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.75)
-                }
-
-                Spacer(minLength: 0)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-        }
-        .accessibilityElement(children: .combine)
+    private func formatSignedValue(_ cents: Int) -> String {
+        guard isBalanceVisible else { return "R$ ••••" }
+        let formatted = CurrencyFormatter.formatCurrency(cents)
+        return cents > 0 ? "+\(formatted)" : formatted
     }
 }

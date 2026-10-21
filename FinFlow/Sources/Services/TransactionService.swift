@@ -148,23 +148,42 @@ public enum TransactionService {
             .sorted { $0.date < $1.date }
     }
 
-    /// Computes summary metrics for a given month's statement transactions (which already include credit card invoice records).
+    /// Computes summary metrics for a given month's statement transactions, accumulating prior months' projections like Organizze.
     public static func summary(
-        for monthTransactions: [Transaction],
-        accounts: [Account]
+        for monthDate: Date = .now,
+        monthTransactions: [Transaction]? = nil,
+        from allTransactions: [Transaction] = [],
+        creditCards: [CreditCard] = [],
+        accounts: [Account],
+        calendar: Calendar = .current
     ) -> MonthSummary {
         let currentBalance = accounts.reduce(0) { $0 + $1.currentBalanceCents }
+        let initialBalance = accounts.reduce(0) { $0 + $1.initialBalanceCents }
+
+        let resolvedMonthTransactions = monthTransactions ?? transactions(
+            for: monthDate,
+            from: allTransactions,
+            creditCards: creditCards,
+            accounts: accounts,
+            calendar: calendar
+        )
+
+        var paidIncome = 0
         var unpaidIncome = 0
+        var paidExpense = 0
         var unpaidExpense = 0
         var monthIncome = 0
         var monthExpense = 0
         var creditCardInvoices = 0
+        var monthTransferNet = 0
 
-        for tx in monthTransactions {
+        for tx in resolvedMonthTransactions {
             switch tx.type {
             case .income:
                 monthIncome += tx.amountCents
-                if !tx.isPaid {
+                if tx.isPaid {
+                    paidIncome += tx.amountCents
+                } else {
                     unpaidIncome += tx.amountCents
                 }
             case .expense:
@@ -172,20 +191,75 @@ public enum TransactionService {
                 if tx.isCreditCardInvoice {
                     creditCardInvoices += tx.amountCents
                 }
-                if !tx.isPaid {
+                if tx.isPaid {
+                    paidExpense += tx.amountCents
+                } else {
                     unpaidExpense += tx.amountCents
                 }
             case .transfer:
-                break
+                if tx.account != nil {
+                    monthTransferNet -= tx.amountCents
+                }
+                if tx.targetAccount != nil {
+                    monthTransferNet += tx.amountCents
+                }
             }
         }
 
-        let expectedBalance = currentBalance + unpaidIncome - unpaidExpense
+        let previousBalance: Int
+        if allTransactions.isEmpty && !resolvedMonthTransactions.isEmpty {
+            previousBalance = currentBalance - paidIncome + paidExpense - monthTransferNet
+        } else {
+            var runningBalance = initialBalance
+            if let earliestDate = allTransactions.min(by: { $0.date < $1.date })?.date,
+               let earliestMonthStart = DateUtils.monthBounds(for: earliestDate, calendar: calendar)?.start,
+               let targetMonthStart = DateUtils.monthBounds(for: monthDate, calendar: calendar)?.start,
+               earliestMonthStart < targetMonthStart {
+                var cursorMonth = earliestMonthStart
+                while cursorMonth < targetMonthStart {
+                    let priorMonthTxs = transactions(
+                        for: cursorMonth,
+                        from: allTransactions,
+                        creditCards: creditCards,
+                        accounts: accounts,
+                        calendar: calendar
+                    )
+                    for tx in priorMonthTxs {
+                        switch tx.type {
+                        case .income:
+                            runningBalance += tx.amountCents
+                        case .expense:
+                            runningBalance -= tx.amountCents
+                        case .transfer:
+                            if tx.account != nil {
+                                runningBalance -= tx.amountCents
+                            }
+                            if tx.targetAccount != nil {
+                                runningBalance += tx.amountCents
+                            }
+                        }
+                    }
+                    guard let nextMonth = calendar.date(byAdding: .month, value: 1, to: cursorMonth),
+                          nextMonth > cursorMonth else {
+                        break
+                    }
+                    cursorMonth = nextMonth
+                }
+            }
+            previousBalance = runningBalance
+        }
+
+        let expectedBalance = previousBalance + monthIncome - monthExpense + monthTransferNet
         return MonthSummary(
+            previousBalanceCents: previousBalance,
             currentBalanceCents: currentBalance,
             expectedBalanceCents: expectedBalance,
             monthIncomeCents: monthIncome,
+            paidIncomeCents: paidIncome,
+            unpaidIncomeCents: unpaidIncome,
             monthExpenseCents: monthExpense,
+            paidExpenseCents: paidExpense,
+            unpaidExpenseCents: unpaidExpense,
             creditCardInvoicesCents: creditCardInvoices
         )
     }

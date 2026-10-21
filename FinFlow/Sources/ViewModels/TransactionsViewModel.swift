@@ -13,10 +13,18 @@ public final class TransactionsViewModel {
 
     public init() {}
 
+    public var isCurrentMonth: Bool {
+        Calendar.current.isDate(selectedDate, equalTo: .now, toGranularity: .month)
+    }
+
     public func changeMonth(by value: Int) {
         if let newDate = Calendar.current.date(byAdding: .month, value: value, to: selectedDate) {
             selectedDate = newDate
         }
+    }
+
+    public func goToCurrentMonth() {
+        selectedDate = .now
     }
 
     public func requestDelete(_ tx: Transaction) {

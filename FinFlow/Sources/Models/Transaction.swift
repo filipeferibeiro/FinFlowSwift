@@ -108,6 +108,20 @@ public final class Transaction {
     }
 
     @Transient
+    public var isActiveMaterializedOccurrence: Bool {
+        if isFixed && recurringGroupId == nil {
+            let ownMonthKey = DateUtils.monthKey(for: date)
+            if deletedMonths.contains(ownMonthKey) {
+                return false
+            }
+            if let endDate, Calendar.current.startOfDay(for: endDate) < Calendar.current.startOfDay(for: date) {
+                return false
+            }
+        }
+        return true
+    }
+
+    @Transient
     public var accountDisplayTitle: String {
         if isCreditCardInvoice {
             let dueDay = Calendar.current.component(.day, from: date)

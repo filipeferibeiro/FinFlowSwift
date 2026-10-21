@@ -189,30 +189,25 @@ public struct CreditCardDetailView: View {
     // MARK: - Subviews
 
     private var monthHeaderBar: some View {
-        PremiumGlassContainer(cornerRadius: Theme.Layout.buttonCornerRadius, padding: 6) {
+        PremiumGlassContainer(cornerRadius: Theme.Layout.buttonCornerRadius, padding: 4) {
             HStack {
                 Button {
                     changeMonth(by: -1)
                 } label: {
                     Image(systemName: "chevron.left")
-                        .font(.subheadline.bold())
-                        .foregroundStyle(Theme.Colors.primary)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(Theme.Colors.textSecondary)
                         .frame(width: 44, height: 44)
-                        .background(Theme.Colors.primary.opacity(0.10), in: .circle)
+                        .contentShape(.rect)
                 }
+                .buttonStyle(.plain)
                 .accessibilityLabel("Fatura anterior")
 
                 Spacer()
 
-                HStack(spacing: 6) {
-                    Image(systemName: "doc.text.fill")
-                        .font(.subheadline.bold())
-                        .foregroundStyle(Theme.Colors.primary)
-
-                    Text("Fatura de \(DateUtils.monthName(for: selectedDate))")
-                        .font(Theme.Typography.headline)
-                        .primaryTextColor()
-                }
+                Text("Fatura de \(DateUtils.monthName(for: selectedDate))")
+                    .font(Theme.Typography.headline)
+                    .primaryTextColor()
 
                 Spacer()
 
@@ -220,11 +215,12 @@ public struct CreditCardDetailView: View {
                     changeMonth(by: 1)
                 } label: {
                     Image(systemName: "chevron.right")
-                        .font(.subheadline.bold())
-                        .foregroundStyle(Theme.Colors.primary)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(Theme.Colors.textSecondary)
                         .frame(width: 44, height: 44)
-                        .background(Theme.Colors.primary.opacity(0.10), in: .circle)
+                        .contentShape(.rect)
                 }
+                .buttonStyle(.plain)
                 .accessibilityLabel("Próxima fatura")
             }
         }

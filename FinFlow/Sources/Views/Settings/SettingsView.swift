@@ -4,6 +4,7 @@ import SwiftData
 public struct SettingsView: View {
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding: Bool = false
     @AppStorage("userName") private var userName: String = "Usuário"
+    @AppStorage("isBalanceVisible") private var isBalanceVisible: Bool = true
     @Environment(\.modelContext) private var modelContext
     @Query private var accounts: [Account]
     @Query private var creditCards: [CreditCard]
@@ -132,7 +133,7 @@ public struct SettingsView: View {
                         Button {
                             accountToEdit = account
                         } label: {
-                            AccountRowView(account: account, isBalanceVisible: true)
+                            AccountRowView(account: account, isBalanceVisible: isBalanceVisible)
                         }
                         .buttonStyle(.plain)
                     }
@@ -206,7 +207,7 @@ public struct SettingsView: View {
                                 invoiceTotalCents: invoice.totalCents,
                                 isInvoicePaid: invoice.isFullyPaid,
                                 usedLimitCents: usedLimit,
-                                isBalanceVisible: true
+                                isBalanceVisible: isBalanceVisible
                             )
                         }
                         .buttonStyle(.plain)

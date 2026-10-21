@@ -26,7 +26,10 @@ public struct TransactionsView: View {
         let visibleTransactions = monthTransactions.filter { viewModel.selectedFilter.matches($0) }
         let groupedTransactions = TransactionService.groupedByDay(visibleTransactions)
         let summary = TransactionService.summary(
-            for: monthTransactions,
+            for: viewModel.selectedDate,
+            monthTransactions: monthTransactions,
+            from: allTransactions,
+            creditCards: creditCards,
             accounts: accounts
         )
 
@@ -35,13 +38,13 @@ public struct TransactionsView: View {
                 ZStack(alignment: .top) {
                     List {
                         Spacer()
-                            .frame(height: 128)
+                            .frame(height: 68)
                             .listRowInsets(EdgeInsets())
                             .listRowBackground(Color.clear)
                             .listRowSeparator(.hidden)
 
                         MonthOverviewView(summary: summary, isBalanceVisible: isBalanceVisible)
-                            .padding(.bottom, 8)
+                            .padding(.bottom, 6)
                             .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
                             .listRowBackground(Color.clear)
                             .listRowSeparator(.hidden)
@@ -163,10 +166,7 @@ public struct TransactionsView: View {
                         value: visibleTransactions.map(\.id)
                     )
 
-                    MonthSelectorView(
-                        selectedDate: viewModel.selectedDate,
-                        selectedFilter: $viewModel.selectedFilter
-                    ) { delta in
+                    MonthSelectorView(selectedDate: viewModel.selectedDate) { delta in
                         withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
                             viewModel.changeMonth(by: delta)
                         }
@@ -183,6 +183,44 @@ public struct TransactionsView: View {
             .navigationTitle("Extrato")
             .navigationBarTitleDisplayMode(.inline)
             .scrollEdgeEffectStyle(.soft, for: .top)
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button {
+                        withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                            viewModel.goToCurrentMonth()
+                        }
+                    } label: {
+                        Image(systemName: "calendar")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(
+                                viewModel.isCurrentMonth ? Theme.Colors.textSecondary : Theme.Colors.primary
+                            )
+                    }
+                    .disabled(viewModel.isCurrentMonth)
+                    .accessibilityLabel("Ir para o mês atual")
+                }
+
+                ToolbarItem(placement: .topBarTrailing) {
+                    Menu {
+                        Picker("Filtrar Lançamentos", selection: $viewModel.selectedFilter.animation(.snappy)) {
+                            ForEach(TransactionFilter.allCases) { filter in
+                                Text(filter.title).tag(filter)
+                            }
+                        }
+                    } label: {
+                        Image(
+                            systemName: viewModel.selectedFilter == .all
+                                ? "line.3.horizontal.decrease.circle"
+                                : "line.3.horizontal.decrease.circle.fill"
+                        )
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(
+                            viewModel.selectedFilter == .all ? Theme.Colors.textPrimary : Theme.Colors.primary
+                        )
+                    }
+                    .accessibilityLabel("Filtrar lançamentos: \(viewModel.selectedFilter.title)")
+                }
+            }
             .navigationDestination(item: $invoiceCardToInspect) { card in
                 CreditCardDetailView(card: card, initialDate: viewModel.selectedDate)
             }

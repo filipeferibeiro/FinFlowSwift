@@ -24,7 +24,10 @@ public struct HomeView: View {
             accounts: accounts
         )
         let summary = TransactionService.summary(
-            for: monthTransactions,
+            for: .now,
+            monthTransactions: monthTransactions,
+            from: allTransactions,
+            creditCards: creditCards,
             accounts: accounts
         )
 
