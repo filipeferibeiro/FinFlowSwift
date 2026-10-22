@@ -8,7 +8,8 @@ public extension View {
         interactive: Bool = false
     ) -> some View {
         if #available(iOS 26, *) {
-            self.glassEffect(.regular, in: shape)
+            self.contentShape(shape)
+                .glassEffect(interactive ? .regular.interactive() : .regular, in: shape)
                 .overlay {
                     shape.stroke(Theme.Colors.cardBorder, lineWidth: 1)
                         .allowsHitTesting(false)
@@ -16,7 +17,8 @@ public extension View {
                 .contentShape(shape)
                 .shadow(color: .black.opacity(0.08), radius: 14, x: 0, y: 6)
         } else {
-            self.background(fallbackMaterial, in: shape)
+            self.contentShape(shape)
+                .background(fallbackMaterial, in: shape)
                 .overlay {
                     shape.stroke(Theme.Colors.cardBorder, lineWidth: 1)
                         .allowsHitTesting(false)
@@ -45,14 +47,16 @@ public extension View {
         interactive: Bool = false
     ) -> some View {
         if #available(iOS 26, *) {
-            self.glassEffect(
-                .regular.tint(tint),
-                in: shape
-            )
-            .contentShape(shape)
-            .shadow(color: tint.opacity(0.32), radius: 14, x: 0, y: 6)
+            self.contentShape(shape)
+                .glassEffect(
+                    interactive ? .regular.tint(tint).interactive() : .regular.tint(tint),
+                    in: shape
+                )
+                .contentShape(shape)
+                .shadow(color: tint.opacity(0.32), radius: 14, x: 0, y: 6)
         } else {
-            self.background(tint.gradient, in: shape)
+            self.contentShape(shape)
+                .background(tint.gradient, in: shape)
                 .overlay {
                     shape.stroke(
                         LinearGradient(

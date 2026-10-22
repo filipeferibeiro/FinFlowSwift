@@ -136,6 +136,7 @@ public struct CreditCardDetailView: View {
         }
         .navigationTitle(card.name)
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar(.visible, for: .navigationBar)
         .scrollEdgeEffectStyle(.soft, for: .top)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {

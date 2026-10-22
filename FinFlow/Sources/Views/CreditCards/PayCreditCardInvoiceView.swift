@@ -58,10 +58,9 @@ public struct PayCreditCardInvoiceView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Fechar") {
+                    Button(role: .cancel) {
                         dismiss()
                     }
-                    .foregroundStyle(Theme.Colors.textSecondary)
                 }
             }
             .onAppear {

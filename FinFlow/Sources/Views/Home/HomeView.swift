@@ -62,7 +62,19 @@ public struct HomeView: View {
                     }
                 }
             }
-            .toolbar(.hidden, for: .navigationBar)
+            .navigationTitle("Visão Geral")
+            .navigationBarTitleDisplayMode(.inline)
+            .scrollEdgeEffectStyle(.soft, for: .top)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button(action: toggleBalanceVisibility) {
+                        Image(systemName: isBalanceVisible ? "eye.fill" : "eye.slash.fill")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(Theme.Colors.primary)
+                    }
+                    .accessibilityLabel(isBalanceVisible ? "Ocultar valores" : "Mostrar valores")
+                }
+            }
             .sheet(item: $activeTransactionType) { selectedType in
                 AddTransactionView(initialType: selectedType)
             }
@@ -112,17 +124,6 @@ public struct HomeView: View {
             }
 
             Spacer()
-
-            Button(action: toggleBalanceVisibility) {
-                Image(systemName: isBalanceVisible ? "eye.fill" : "eye.slash.fill")
-                    .font(.body.weight(.semibold))
-                    .foregroundStyle(Theme.Colors.primary)
-                    .frame(width: 44, height: 44)
-                    .glassEffectWithFallback(in: .circle)
-            }
-            .buttonStyle(.plain)
-            .contentShape(.circle)
-            .accessibilityLabel(isBalanceVisible ? "Ocultar valores" : "Mostrar valores")
         }
         .padding(.top, 4)
     }
@@ -181,7 +182,7 @@ public struct HomeView: View {
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, 12)
-            .glassEffectWithFallback(in: .rect(cornerRadius: Theme.Layout.cornerRadius))
+            .glassEffectWithFallback(in: .rect(cornerRadius: Theme.Layout.cornerRadius), interactive: true)
         }
         .buttonStyle(.plain)
     }

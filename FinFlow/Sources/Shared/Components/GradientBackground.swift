@@ -36,6 +36,7 @@ public struct GradientBackground: View {
             .ignoresSafeArea()
             .accessibilityHidden(true)
         }
+        .allowsHitTesting(false)
         .onAppear {
             guard !reduceMotion else { return }
             withAnimation(.easeInOut(duration: 9.0).repeatForever(autoreverses: true)) {

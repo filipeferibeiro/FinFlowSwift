@@ -85,13 +85,12 @@ struct AddAccountView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancelar") { dismiss() }
-                        .foregroundStyle(Theme.Colors.textSecondary)
+                    Button(role: .cancel) {
+                        dismiss()
+                    }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Salvar", action: save)
-                        .font(.headline)
-                        .foregroundStyle(isValid ? Theme.Colors.primary : Theme.Colors.textTertiary)
+                    Button(role: .confirm, action: save)
                         .disabled(!isValid)
                 }
             }
