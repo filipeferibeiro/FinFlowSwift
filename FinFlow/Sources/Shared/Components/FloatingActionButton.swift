@@ -1,6 +1,8 @@
 import SwiftUI
 
 public struct FloatingActionButton: View {
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+
     let title: String
     let systemImage: String
     let action: () -> Void
@@ -16,6 +18,8 @@ public struct FloatingActionButton: View {
     }
 
     public var body: some View {
+        let isRegular = horizontalSizeClass == .regular
+
         Button(action: action) {
             Image(systemName: systemImage)
                 .font(.title2.bold())
@@ -24,7 +28,7 @@ public struct FloatingActionButton: View {
                 .prominentGlassEffectWithFallback(in: .circle, interactive: true)
         }
         .accessibilityLabel(title)
-        .padding(.trailing, 20)
-        .padding(.bottom, 20)
+        .padding(.trailing, isRegular ? 32 : 20)
+        .padding(.bottom, isRegular ? 28 : 20)
     }
 }

@@ -50,7 +50,7 @@ public struct PayCreditCardInvoiceView: View {
                         Spacer()
                             .frame(height: 32)
                     }
-                    .padding(.horizontal)
+                    .adaptiveContainer(maxWidth: Theme.Layout.maxFormWidth)
                 }
                 .scrollIndicators(.hidden)
             }

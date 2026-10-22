@@ -38,7 +38,8 @@ struct IconSelectionView: View {
                         .accessibilityAddTraits(isSelected ? .isSelected : [])
                     }
                 }
-                .padding()
+                .padding(.vertical)
+                .adaptiveContainer(maxWidth: Theme.Layout.maxFormWidth)
             }
             .scrollIndicators(.hidden)
         }

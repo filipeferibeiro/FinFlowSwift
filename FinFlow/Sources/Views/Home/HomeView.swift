@@ -2,6 +2,7 @@ import SwiftUI
 import SwiftData
 
 public struct HomeView: View {
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @AppStorage("userName") private var userName: String = "Usuário"
     @AppStorage("isBalanceVisible") private var isBalanceVisible: Bool = true
 
@@ -45,15 +46,25 @@ public struct HomeView: View {
 
                         quickActionsRow
 
-                        accountsSection
+                        if horizontalSizeClass == .regular {
+                            HStack(alignment: .top, spacing: 24) {
+                                accountsSection
+                                    .frame(maxWidth: .infinity, alignment: .top)
 
-                        creditCardsSection
+                                creditCardsSection
+                                    .frame(maxWidth: .infinity, alignment: .top)
+                            }
+                        } else {
+                            accountsSection
+
+                            creditCardsSection
+                        }
 
                         Spacer()
                             .frame(height: 90)
                     }
-                    .padding(.horizontal)
                     .padding(.top, 8)
+                    .adaptiveContainer(maxWidth: Theme.Layout.maxDashboardWidth)
                 }
                 .scrollIndicators(.hidden)
                 .overlay(alignment: .bottomTrailing) {
@@ -65,6 +76,9 @@ public struct HomeView: View {
             .navigationTitle("Visão Geral")
             .navigationBarTitleDisplayMode(.inline)
             .scrollEdgeEffectStyle(.soft, for: .top)
+            .navigationDestination(for: CreditCard.self) { card in
+                CreditCardDetailView(card: card)
+            }
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button(action: toggleBalanceVisibility) {
@@ -297,9 +311,7 @@ public struct HomeView: View {
                                 from: allTransactions
                             )
 
-                            NavigationLink {
-                                CreditCardDetailView(card: card)
-                            } label: {
+                            NavigationLink(value: card) {
                                 CreditCardRowView(
                                     card: card,
                                     invoiceTotalCents: invoice.totalCents,

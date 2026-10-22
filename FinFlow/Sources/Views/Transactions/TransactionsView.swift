@@ -3,6 +3,7 @@ import SwiftData
 
 public struct TransactionsView: View {
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @AppStorage("isBalanceVisible") private var isBalanceVisible: Bool = true
 
@@ -32,6 +33,9 @@ public struct TransactionsView: View {
             creditCards: creditCards,
             accounts: accounts
         )
+        let horizontalInset = horizontalSizeClass == .regular
+            ? Theme.Layout.regularHorizontalPadding
+            : Theme.Layout.compactHorizontalPadding
 
         NavigationStack {
             BaseView {
@@ -45,7 +49,7 @@ public struct TransactionsView: View {
 
                         MonthOverviewView(summary: summary, isBalanceVisible: isBalanceVisible)
                             .padding(.bottom, 6)
-                            .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
+                            .listRowInsets(EdgeInsets(top: 0, leading: horizontalInset, bottom: 0, trailing: horizontalInset))
                             .listRowBackground(Color.clear)
                             .listRowSeparator(.hidden)
 
@@ -82,7 +86,7 @@ public struct TransactionsView: View {
                                         .padding(.vertical, 4)
                                         .listRowBackground(Color.clear)
                                         .listRowSeparator(.hidden)
-                                        .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
+                                        .listRowInsets(EdgeInsets(top: 0, leading: horizontalInset, bottom: 0, trailing: horizontalInset))
                                         .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                                             if let cardId = tx.invoiceCreditCardId,
                                                let card = creditCards.first(where: { $0.id == cardId }) {
@@ -146,7 +150,7 @@ public struct TransactionsView: View {
                                         .textCase(nil)
                                         .padding(.top, 12)
                                         .padding(.bottom, 4)
-                                        .padding(.horizontal, 16)
+                                        .padding(.horizontal, horizontalInset)
                                 }
                                 .listRowInsets(EdgeInsets())
                             }
@@ -171,9 +175,11 @@ public struct TransactionsView: View {
                             viewModel.changeMonth(by: delta)
                         }
                     }
-                    .padding(.horizontal, 16)
+                    .padding(.horizontal, horizontalInset)
                     .padding(.top, 8)
                 }
+                .frame(maxWidth: horizontalSizeClass == .regular ? Theme.Layout.maxContentWidth : .infinity)
+                .frame(maxWidth: .infinity)
                 .overlay(alignment: .bottomTrailing) {
                     FloatingActionButton {
                         viewModel.isAddingTransaction = true

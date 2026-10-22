@@ -3,6 +3,7 @@ import SwiftData
 
 public struct CreditCardDetailView: View {
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @AppStorage("isBalanceVisible") private var isBalanceVisible: Bool = true
 
@@ -40,6 +41,9 @@ public struct CreditCardDetailView: View {
             for: card,
             from: allTransactions
         )
+        let horizontalInset = horizontalSizeClass == .regular
+            ? Theme.Layout.regularHorizontalPadding
+            : Theme.Layout.compactHorizontalPadding
 
         BaseView {
             ZStack(alignment: .top) {
@@ -55,7 +59,7 @@ public struct CreditCardDetailView: View {
                         usedLimitCents: usedLimitCents
                     )
                     .padding(.bottom, 8)
-                    .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
+                    .listRowInsets(EdgeInsets(top: 0, leading: horizontalInset, bottom: 0, trailing: horizontalInset))
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
 
@@ -86,7 +90,7 @@ public struct CreditCardDetailView: View {
                                     .padding(.vertical, 4)
                                     .listRowBackground(Color.clear)
                                     .listRowSeparator(.hidden)
-                                    .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
+                                    .listRowInsets(EdgeInsets(top: 0, leading: horizontalInset, bottom: 0, trailing: horizontalInset))
                                     .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                                         Button {
                                             transactionToDelete = tx
@@ -104,7 +108,7 @@ public struct CreditCardDetailView: View {
                                     .textCase(nil)
                                     .padding(.top, 12)
                                     .padding(.bottom, 4)
-                                    .padding(.horizontal, 16)
+                                    .padding(.horizontal, horizontalInset)
                             }
                             .listRowInsets(EdgeInsets())
                         }
@@ -125,9 +129,11 @@ public struct CreditCardDetailView: View {
                 )
 
                 monthHeaderBar
-                    .padding(.horizontal, 16)
+                    .padding(.horizontal, horizontalInset)
                     .padding(.top, 8)
             }
+            .frame(maxWidth: horizontalSizeClass == .regular ? Theme.Layout.maxContentWidth : .infinity)
+            .frame(maxWidth: .infinity)
             .overlay(alignment: .bottomTrailing) {
                 FloatingActionButton(title: "Nova Compra no Cartão") {
                     isAddingPurchase = true

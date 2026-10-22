@@ -58,7 +58,8 @@ struct WelcomeStepView: View {
             }
             .buttonStyle(.customProminentGlass)
         }
-        .padding(Theme.Layout.standardPadding)
+        .padding(.vertical, Theme.Layout.standardPadding)
+        .adaptiveContainer(maxWidth: Theme.Layout.maxFormWidth)
     }
 
     private func featureHighlight(icon: String, title: String, subtitle: String) -> some View {

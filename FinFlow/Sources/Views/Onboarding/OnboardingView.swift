@@ -14,8 +14,8 @@ public struct OnboardingView: View {
         BaseView {
             VStack(spacing: 0) {
                 topProgressHeader
-                    .padding(.horizontal, Theme.Layout.standardPadding)
                     .padding(.top, 12)
+                    .adaptiveContainer(maxWidth: Theme.Layout.maxFormWidth)
 
                 TabView(selection: $viewModel.currentStep) {
                     Tab(value: OnboardingStep.welcome) {

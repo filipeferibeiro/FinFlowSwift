@@ -59,6 +59,7 @@ struct ProfileStepView: View {
             .disabled(!viewModel.isNameValid)
             .opacity(viewModel.isNameValid ? 1.0 : 0.45)
         }
-        .padding(Theme.Layout.standardPadding)
+        .padding(.vertical, Theme.Layout.standardPadding)
+        .adaptiveContainer(maxWidth: Theme.Layout.maxFormWidth)
     }
 }

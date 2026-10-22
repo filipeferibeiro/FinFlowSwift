@@ -88,7 +88,7 @@ struct AddCreditCardView: View {
                         Spacer()
                             .frame(height: 40)
                     }
-                    .padding(.horizontal)
+                    .adaptiveContainer(maxWidth: Theme.Layout.maxFormWidth)
                 }
                 .scrollIndicators(.hidden)
                 .scrollClipDisabled()

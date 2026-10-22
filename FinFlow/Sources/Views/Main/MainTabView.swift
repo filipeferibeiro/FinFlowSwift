@@ -17,6 +17,7 @@ public struct MainTabView: View {
                 SettingsView()
             }
         }
+        .tabViewStyle(.sidebarAdaptable)
         .tint(Theme.Colors.primary)
     }
 }

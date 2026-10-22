@@ -2,6 +2,7 @@ import SwiftUI
 import SwiftData
 
 public struct SettingsView: View {
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding: Bool = false
     @AppStorage("userName") private var userName: String = "Usuário"
     @AppStorage("isBalanceVisible") private var isBalanceVisible: Bool = true
@@ -27,16 +28,27 @@ public struct SettingsView: View {
                     VStack(spacing: 24) {
                         profileSection
 
-                        accountsManagementSection
+                        if horizontalSizeClass == .regular {
+                            HStack(alignment: .top, spacing: 24) {
+                                accountsManagementSection
+                                    .frame(maxWidth: .infinity, alignment: .top)
 
-                        creditCardsManagementSection
+                                creditCardsManagementSection
+                                    .frame(maxWidth: .infinity, alignment: .top)
+                            }
+                        } else {
+                            accountsManagementSection
+
+                            creditCardsManagementSection
+                        }
 
                         systemSection
 
                         Spacer()
                             .frame(height: 60)
                     }
-                    .padding()
+                    .padding(.vertical)
+                    .adaptiveContainer(maxWidth: Theme.Layout.maxDashboardWidth)
                 }
                 .scrollIndicators(.hidden)
             }
@@ -250,75 +262,89 @@ public struct SettingsView: View {
                 .padding(.leading, 4)
 
             FallbackGlassContainer(spacing: 10) {
-                VStack(spacing: 10) {
-                    Button {
-                        withAnimation {
-                            hasCompletedOnboarding = false
-                        }
-                    } label: {
-                        HStack(spacing: 12) {
-                            RoundedRectangle(cornerRadius: 12)
-                                .fill(Theme.Colors.primary.opacity(0.14))
-                                .frame(width: 40, height: 40)
-                                .overlay {
-                                    Image(systemName: "sparkles")
-                                        .font(.subheadline.bold())
-                                        .foregroundStyle(Theme.Colors.primary)
-                                }
-
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text("Rever Apresentação Inicial")
-                                    .font(Theme.Typography.subheadline)
-                                    .primaryTextColor()
-                                Text("Voltar para o fluxo de boas-vindas")
-                                    .font(Theme.Typography.caption2)
-                                    .secondaryTextColor()
-                            }
-
-                            Spacer()
-
-                            Image(systemName: "chevron.right")
-                                .font(.caption.bold())
-                                .foregroundStyle(Theme.Colors.textTertiary)
-                        }
-                        .padding(14)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .glassEffectWithFallback(in: .rect(cornerRadius: Theme.Layout.cornerRadius), interactive: true)
+                if horizontalSizeClass == .regular {
+                    HStack(spacing: 16) {
+                        reviewOnboardingButton
+                        resetAppButton
                     }
-                    .buttonStyle(.plain)
-
-                    Button(role: .destructive) {
-                        showingWipeConfirmation = true
-                    } label: {
-                        HStack(spacing: 12) {
-                            RoundedRectangle(cornerRadius: 12)
-                                .fill(Theme.Colors.error.opacity(0.14))
-                                .frame(width: 40, height: 40)
-                                .overlay {
-                                    Image(systemName: "trash.fill")
-                                        .font(.subheadline.bold())
-                                        .foregroundStyle(Theme.Colors.error)
-                                }
-
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text("Redefinir Aplicativo")
-                                    .font(Theme.Typography.subheadline)
-                                    .foregroundStyle(Theme.Colors.error)
-                                Text("Apagar todas as contas, cartões e lançamentos")
-                                    .font(Theme.Typography.caption2)
-                                    .secondaryTextColor()
-                            }
-
-                            Spacer()
-                        }
-                        .padding(14)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .glassEffectWithFallback(in: .rect(cornerRadius: Theme.Layout.cornerRadius), interactive: true)
+                } else {
+                    VStack(spacing: 10) {
+                        reviewOnboardingButton
+                        resetAppButton
                     }
-                    .buttonStyle(.plain)
                 }
             }
         }
+    }
+
+    private var reviewOnboardingButton: some View {
+        Button {
+            withAnimation {
+                hasCompletedOnboarding = false
+            }
+        } label: {
+            HStack(spacing: 12) {
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(Theme.Colors.primary.opacity(0.14))
+                    .frame(width: 40, height: 40)
+                    .overlay {
+                        Image(systemName: "sparkles")
+                            .font(.subheadline.bold())
+                            .foregroundStyle(Theme.Colors.primary)
+                    }
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Rever Apresentação Inicial")
+                        .font(Theme.Typography.subheadline)
+                        .primaryTextColor()
+                    Text("Voltar para o fluxo de boas-vindas")
+                        .font(Theme.Typography.caption2)
+                        .secondaryTextColor()
+                }
+
+                Spacer()
+
+                Image(systemName: "chevron.right")
+                    .font(.caption.bold())
+                    .foregroundStyle(Theme.Colors.textTertiary)
+            }
+            .padding(14)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .glassEffectWithFallback(in: .rect(cornerRadius: Theme.Layout.cornerRadius), interactive: true)
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var resetAppButton: some View {
+        Button(role: .destructive) {
+            showingWipeConfirmation = true
+        } label: {
+            HStack(spacing: 12) {
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(Theme.Colors.error.opacity(0.14))
+                    .frame(width: 40, height: 40)
+                    .overlay {
+                        Image(systemName: "trash.fill")
+                            .font(.subheadline.bold())
+                            .foregroundStyle(Theme.Colors.error)
+                    }
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Redefinir Aplicativo")
+                        .font(Theme.Typography.subheadline)
+                        .foregroundStyle(Theme.Colors.error)
+                    Text("Apagar todas as contas, cartões e lançamentos")
+                        .font(Theme.Typography.caption2)
+                        .secondaryTextColor()
+                }
+
+                Spacer()
+            }
+            .padding(14)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .glassEffectWithFallback(in: .rect(cornerRadius: Theme.Layout.cornerRadius), interactive: true)
+        }
+        .buttonStyle(.plain)
     }
 
     private func wipeData() {

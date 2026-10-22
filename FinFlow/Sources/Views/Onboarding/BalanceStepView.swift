@@ -75,6 +75,7 @@ struct BalanceStepView: View {
             .disabled(!viewModel.isAccountValid)
             .opacity(viewModel.isAccountValid ? 1.0 : 0.45)
         }
-        .padding(Theme.Layout.standardPadding)
+        .padding(.vertical, Theme.Layout.standardPadding)
+        .adaptiveContainer(maxWidth: Theme.Layout.maxFormWidth)
     }
 }

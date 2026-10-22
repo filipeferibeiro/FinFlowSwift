@@ -101,6 +101,11 @@ public enum Theme {
 
     public enum Layout {
         public static let standardPadding: Double = 20
+        public static let compactHorizontalPadding: Double = 16
+        public static let regularHorizontalPadding: Double = 32
+        public static let maxDashboardWidth: Double = 1040
+        public static let maxContentWidth: Double = 820
+        public static let maxFormWidth: Double = 560
         public static let cornerRadius: Double = 16
         public static let cardCornerRadius: Double = 24
         public static let buttonCornerRadius: Double = 16
